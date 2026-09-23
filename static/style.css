@@ -1,10 +1,12 @@
 /* ==========================================================================
-   Taiwan Live Weather Map - Windy Inspired + OpenStreetMap + Leaflet
+   Taiwan Live Weather Map - Windy Inspired Immersive Theme
+   Leaflet Map + Floating Glass Panels + Dynamic Weather Dashboard
    ========================================================================== */
 
 :root {
   --bg-deep: #030712;
-  --bg-panel: rgba(17, 24, 39, 0.88);
+  --bg-panel: rgba(17, 24, 39, 0.82);
+  --bg-panel-solid: #111827;
   --panel-border: rgba(255, 255, 255, 0.12);
   --panel-border-hover: rgba(56, 189, 248, 0.4);
 
@@ -18,19 +20,47 @@
   --accent-emerald: #10b981;
   --accent-rose: #f43f5e;
 
+  /* Temperature Scale */
+  --t-5: #2c7bb6;
+  --t-10: #5aa2cf;
+  --t-15: #abd9e9;
+  --t-20: #7fcdbb;
+  --t-24: #d9ef8b;
+  --t-28: #fee08b;
+  --t-32: #fdae61;
+  --t-36: #d73027;
+
   --radius-xl: 18px;
   --radius-lg: 12px;
   --radius-md: 8px;
   --radius-sm: 4px;
 
-  --shadow-float: 0 20px 35px -5px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  --shadow-float:
+    0 20px 35px -5px rgba(0, 0, 0, 0.7),
+    0 0 1px 1px rgba(255, 255, 255, 0.1);
+
   --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ==========================================================================
+   0. Global Reset
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
 
 body.windy-theme {
-  font-family: 'Inter', 'Noto Sans TC', sans-serif;
+  font-family: "Inter", "Noto Sans TC", sans-serif;
   background-color: var(--bg-deep);
   color: var(--text-primary);
   width: 100vw;
@@ -39,6 +69,11 @@ body.windy-theme {
   user-select: none;
 }
 
+
+/* ==========================================================================
+   1. Main Application Container
+   ========================================================================== */
+
 .map-app-container {
   position: relative;
   width: 100vw;
@@ -46,269 +81,1372 @@ body.windy-theme {
   overflow: hidden;
 }
 
-/* ======== Leaflet Map ======== */
+
+/* ==========================================================================
+   2. Leaflet Full-screen Map
+   ========================================================================== */
+
 .map-fullscreen-viewport {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  width: 100%;
+  height: 100vh;
+  background: #030712;
+  z-index: 10;
 }
 
 #leaflet-map {
   width: 100%;
   height: 100%;
-  background: var(--bg-deep);
 }
 
-/* Override Leaflet tile background for dark tiles */
+
+/* ==========================================================================
+   3. Leaflet Default UI
+   ========================================================================== */
+
 .leaflet-container {
-  background: #0a0e1a !important;
+  width: 100%;
+  height: 100%;
+  background: #030712;
+  font-family: "Inter", "Noto Sans TC", sans-serif;
 }
 
-/* ======== Floating Nav ======== */
+/* Leaflet attribution */
+.leaflet-control-attribution {
+  background: rgba(3, 7, 18, 0.75) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  border-radius: 6px 0 0 0;
+  padding: 4px 8px !important;
+  font-size: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-attribution a {
+  color: rgba(125, 211, 252, 0.85) !important;
+}
+
+/* Leaflet zoom buttons */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.leaflet-control-zoom a {
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 32px !important;
+
+  background: rgba(17, 24, 39, 0.85) !important;
+  color: #f9fafb !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+
+  backdrop-filter: blur(12px);
+
+  font-size: 18px !important;
+  font-weight: 500;
+
+  transition: var(--transition);
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: var(--accent-sky) !important;
+}
+
+.leaflet-control-zoom-in {
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.leaflet-control-zoom-out {
+  border-radius: 0 0 8px 8px !important;
+}
+
+
+/* ==========================================================================
+   4. Top Floating Navigation
+   ========================================================================== */
+
 .floating-nav {
   position: absolute;
   top: 16px;
   left: 16px;
   right: 16px;
-  z-index: 1000;
+
+  z-index: 900;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   padding: 12px 20px;
+
   background: var(--bg-panel);
+
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+
   box-shadow: var(--shadow-float);
+
   pointer-events: auto;
 }
 
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand-icon { font-size: 1.8rem; }
-.brand-title {
-  font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em;
-  background: linear-gradient(135deg, #fff 40%, var(--accent-sky) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.brand-subtitle { font-size: 0.74rem; color: var(--text-secondary); }
 
-.nav-actions { display: flex; align-items: center; gap: 14px; }
+.brand-icon {
+  font-size: 1.8rem;
+}
+
+.brand-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+
+  background: linear-gradient(135deg,
+      #ffffff 40%,
+      var(--accent-sky) 100%);
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-subtitle {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 
 .status-indicator {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.78rem; color: var(--accent-emerald);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 0.78rem;
+  color: var(--accent-emerald);
+
   background: rgba(16, 185, 129, 0.12);
-  padding: 5px 12px; border-radius: 9999px;
+
+  padding: 5px 12px;
+
+  border-radius: 9999px;
+
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
+
 .status-dot {
-  width: 7px; height: 7px; background: var(--accent-emerald);
-  border-radius: 50%; box-shadow: 0 0 8px var(--accent-emerald);
+  width: 7px;
+  height: 7px;
+
+  background: var(--accent-emerald);
+
+  border-radius: 50%;
+
+  box-shadow: 0 0 8px var(--accent-emerald);
 }
 
 .btn-glass {
-  background: rgba(255,255,255,0.08); color: var(--text-primary);
-  border: 1px solid var(--panel-border); padding: 6px 14px;
-  border-radius: var(--radius-md); font-size: 0.82rem; font-weight: 600;
-  cursor: pointer; transition: var(--transition);
-}
-.btn-glass:hover { background: rgba(255,255,255,0.15); border-color: var(--panel-border-hover); }
+  background: rgba(255, 255, 255, 0.08);
 
-/* ======== Floating Panels ======== */
-.floating-panel {
-  position: absolute; z-index: 1000;
-  background: var(--bg-panel);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  color: var(--text-primary);
+
   border: 1px solid var(--panel-border);
+
+  padding: 6px 14px;
+
+  border-radius: var(--radius-md);
+
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--panel-border-hover);
+}
+
+
+/* ==========================================================================
+   5. Floating Panels
+   ========================================================================== */
+
+.floating-panel {
+  position: absolute;
+
+  z-index: 910;
+
+  background: var(--bg-panel);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  border: 1px solid var(--panel-border);
+
   border-radius: var(--radius-lg);
+
   box-shadow: var(--shadow-float);
-  padding: 16px; pointer-events: auto;
+
+  padding: 16px;
+
+  pointer-events: auto;
 }
 
-/* Controls Panel */
-.controls-panel { top: 86px; right: 20px; width: 210px; }
+
+/* ==========================================================================
+   6. Weather Layer Control Panel
+   ========================================================================== */
+
+.controls-panel {
+  top: 86px;
+  right: 20px;
+
+  width: 210px;
+}
+
 .panel-section-title {
-  font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+  font-size: 0.72rem;
+
+  font-weight: 700;
+
+  color: var(--text-muted);
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.05em;
+
+  margin-bottom: 8px;
 }
-.layer-buttons-group { display: flex; flex-direction: column; gap: 6px; }
+
+.layer-buttons-group {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
 .layer-btn {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 8px 12px; background: rgba(255,255,255,0.05);
-  border: 1px solid transparent; border-radius: var(--radius-md);
-  color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;
-  cursor: pointer; transition: var(--transition); text-align: left;
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  width: 100%;
+
+  padding: 8px 12px;
+
+  background: rgba(255, 255, 255, 0.05);
+
+  border: 1px solid transparent;
+
+  border-radius: var(--radius-md);
+
+  color: var(--text-secondary);
+
+  font-size: 0.85rem;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+
+  text-align: left;
 }
-.layer-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+.layer-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
 .layer-btn.active {
-  background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.5);
-  color: var(--accent-sky); font-weight: 600;
+  background: rgba(56, 189, 248, 0.2);
+
+  border-color: rgba(56, 189, 248, 0.5);
+
+  color: var(--accent-sky);
+
+  font-weight: 600;
 }
-.panel-divider { height: 1px; background: var(--panel-border); margin: 12px 0; }
-.toggle-group { display: flex; flex-direction: column; gap: 8px; }
+
+.layer-icon {
+  width: 20px;
+  text-align: center;
+}
+
+.panel-divider {
+  height: 1px;
+
+  background: var(--panel-border);
+
+  margin: 12px 0;
+}
+
+
+/* ==========================================================================
+   7. Map Settings Toggles
+   ========================================================================== */
+
+.toggle-group {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
 .toggle-item {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  font-size: 0.8rem;
+
+  color: var(--text-secondary);
+
+  cursor: pointer;
 }
-.toggle-item input[type="checkbox"] { accent-color: var(--accent-sky); width: 15px; height: 15px; cursor: pointer; }
+
+.toggle-item input[type="checkbox"] {
+  accent-color: var(--accent-sky);
+
+  width: 15px;
+  height: 15px;
+
+  cursor: pointer;
+}
+
+
+/* ==========================================================================
+   8. Load All Weather Button
+   ========================================================================== */
+
 .btn-action-primary {
-  width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 8px 12px; background: linear-gradient(135deg, #0284c7, #2563eb);
-  color: #fff; border: none; border-radius: var(--radius-md);
-  font-size: 0.82rem; font-weight: 600; cursor: pointer;
-  transition: var(--transition); box-shadow: 0 4px 12px rgba(37,99,235,0.3);
-}
-.btn-action-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  width: 100%;
 
-/* Legend Panel */
-.legend-panel { bottom: 24px; right: 20px; width: 260px; padding: 12px 16px; }
-.legend-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.legend-unit { font-size: 0.78rem; font-weight: 700; color: var(--text-primary); }
-.legend-hint { font-size: 0.7rem; color: var(--text-muted); }
-.legend-bar-container { width: 100%; height: 10px; border-radius: 9999px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4); }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  padding: 8px 12px;
+
+  background: linear-gradient(135deg,
+      #0284c7 0%,
+      #2563eb 100%);
+
+  color: #ffffff;
+
+  border: none;
+
+  border-radius: var(--radius-md);
+
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+
+  box-shadow:
+    0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-action-primary:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.btn-action-primary:active {
+  transform: translateY(0);
+}
+
+
+/* ==========================================================================
+   9. Weather Legend
+   ========================================================================== */
+
+.legend-panel {
+  bottom: 24px;
+  right: 20px;
+
+  width: 260px;
+
+  padding: 12px 16px;
+}
+
+.legend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 6px;
+}
+
+.legend-unit {
+  font-size: 0.78rem;
+
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+.legend-hint {
+  font-size: 0.7rem;
+
+  color: var(--text-muted);
+}
+
+.legend-bar-container {
+  width: 100%;
+  height: 10px;
+
+  border-radius: 9999px;
+
+  overflow: hidden;
+
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 .legend-gradient-bar {
-  width: 100%; height: 100%;
-  background: linear-gradient(to right, #2c7bb6, #5aa2cf, #abd9e9, #7fcdbb, #d9ef8b, #fee08b, #fdae61, #f46d43, #d73027);
-}
-.legend-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+  width: 100%;
+  height: 100%;
 
-/* ======== Floating Drawer ======== */
-.floating-drawer {
-  position: absolute; top: 86px; left: 20px; bottom: 24px;
-  width: 420px; max-width: calc(100vw - 40px); z-index: 1010;
-  background: var(--bg-panel); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-  border: 1px solid var(--panel-border); border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-float); display: flex; flex-direction: column;
-  overflow: hidden; pointer-events: auto;
-  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease;
+  background: linear-gradient(to right,
+      #2c7bb6,
+      #5aa2cf,
+      #abd9e9,
+      #7fcdbb,
+      #d9ef8b,
+      #fee08b,
+      #fdae61,
+      #f46d43,
+      #d73027);
 }
-.floating-drawer.collapsed { transform: translateX(calc(-100% - 30px)); opacity: 0; pointer-events: none; }
+
+.legend-labels {
+  display: flex;
+
+  justify-content: space-between;
+
+  margin-top: 4px;
+
+  font-size: 0.68rem;
+
+  color: var(--text-muted);
+
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   10. Floating Weather Drawer
+   ========================================================================== */
+
+.floating-drawer {
+  position: absolute;
+
+  top: 86px;
+  left: 20px;
+  bottom: 24px;
+
+  width: 420px;
+
+  max-width: calc(100vw - 40px);
+
+  z-index: 920;
+
+  background: var(--bg-panel);
+
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+
+  border: 1px solid var(--panel-border);
+
+  border-radius: var(--radius-xl);
+
+  box-shadow: var(--shadow-float);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  pointer-events: auto;
+
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s ease;
+}
+
+.floating-drawer.collapsed {
+  transform: translateX(calc(-100% - 30px));
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+
+/* ==========================================================================
+   11. Drawer Header
+   ========================================================================== */
 
 .drawer-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 20px; border-bottom: 1px solid var(--panel-border);
-  background: rgba(255,255,255,0.02);
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 16px 20px;
+
+  border-bottom: 1px solid var(--panel-border);
+
+  background: rgba(255, 255, 255, 0.02);
 }
-.drawer-header-left { display: flex; align-items: center; gap: 8px; }
-.drawer-title-icon { font-size: 1.1rem; }
-.drawer-title { font-size: 0.95rem; font-weight: 600; }
+
+.drawer-header-left {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+.drawer-title-icon {
+  font-size: 1.1rem;
+}
+
+.drawer-title {
+  font-size: 0.95rem;
+
+  font-weight: 600;
+
+  color: var(--text-primary);
+}
+
 .drawer-close-btn {
-  background: rgba(255,255,255,0.08); color: var(--text-muted); border: none;
-  width: 28px; height: 28px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: var(--transition);
+  background: rgba(255, 255, 255, 0.08);
+
+  color: var(--text-muted);
+
+  border: none;
+
+  width: 28px;
+  height: 28px;
+
+  border-radius: 50%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  transition: var(--transition);
 }
-.drawer-close-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
 
-.drawer-content-scroll { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
-.drawer-content-scroll::-webkit-scrollbar { width: 5px; }
-.drawer-content-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+.drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 
-/* State Panels */
-.state-panel { display: flex; flex-direction: column; flex: 1; }
-.state-panel.hidden { display: none !important; }
+  color: #ffffff;
+}
 
-#initial-state, #error-state { justify-content: center; align-items: center; text-align: center; padding: 40px 10px; }
-.empty-icon, .error-icon { font-size: 3.5rem; margin-bottom: 16px; animation: floatIcon 3s ease-in-out infinite; }
-@keyframes floatIcon { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-#initial-state h3, #error-state h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; }
-#initial-state p, #error-state p { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; }
+
+/* ==========================================================================
+   12. Drawer Content
+   ========================================================================== */
+
+.drawer-content-scroll {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 20px;
+
+  display: flex;
+
+  flex-direction: column;
+}
+
+
+/* Custom scrollbar */
+
+.drawer-content-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.drawer-content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drawer-content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+
+  border-radius: 4px;
+}
+
+.drawer-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+
+/* ==========================================================================
+   13. State Panels
+   ========================================================================== */
+
+.state-panel {
+  display: flex;
+
+  flex-direction: column;
+
+  flex: 1;
+}
+
+.state-panel.hidden {
+  display: none !important;
+}
+
+
+/* Initial / Error */
+
+#initial-state,
+#error-state {
+  justify-content: center;
+
+  align-items: center;
+
+  text-align: center;
+
+  padding: 40px 10px;
+}
+
+.empty-icon,
+.error-icon {
+  font-size: 3.5rem;
+
+  margin-bottom: 16px;
+
+  animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+#initial-state h3,
+#error-state h3 {
+  font-size: 1.25rem;
+
+  font-weight: 700;
+
+  margin-bottom: 10px;
+}
+
+#initial-state p,
+#error-state p {
+  color: var(--text-secondary);
+
+  font-size: 0.85rem;
+
+  line-height: 1.6;
+}
+
+
+/* Retry button */
+
 .btn-retry {
-  margin-top: 18px; background: var(--accent-blue); color: #fff; border: none;
-  padding: 9px 22px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600;
-  cursor: pointer; transition: var(--transition);
-}
-.btn-retry:hover { background: var(--accent-sky); }
+  margin-top: 18px;
 
-#loading-state { justify-content: center; align-items: center; text-align: center; padding: 50px 10px; }
+  background: var(--accent-blue);
+
+  color: #ffffff;
+
+  border: none;
+
+  padding: 9px 22px;
+
+  border-radius: var(--radius-md);
+
+  font-size: 0.85rem;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.btn-retry:hover {
+  background: var(--accent-sky);
+}
+
+
+/* ==========================================================================
+   14. Loading State
+   ========================================================================== */
+
+#loading-state {
+  justify-content: center;
+
+  align-items: center;
+
+  text-align: center;
+
+  padding: 50px 10px;
+}
+
 .pulse-spinner {
-  width: 44px; height: 44px; border: 4px solid rgba(56,189,248,0.15);
-  border-top-color: var(--accent-sky); border-radius: 50%;
-  animation: spinAnim 0.75s linear infinite; margin-bottom: 18px;
-}
-@keyframes spinAnim { to{transform:rotate(360deg)} }
-#loading-state h3 { font-size: 1.15rem; font-weight: 600; color: var(--accent-sky); margin-bottom: 6px; }
-#loading-state p { color: var(--text-muted); font-size: 0.82rem; }
+  width: 44px;
+  height: 44px;
 
-/* Weather Content */
-.city-summary-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
-.city-region-tag { font-size: 0.72rem; font-weight: 700; color: var(--accent-sky); letter-spacing: 0.04em; text-transform: uppercase; }
-.city-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
-.city-update-box { display: flex; flex-direction: column; align-items: flex-end; }
-.update-lbl { font-size: 0.7rem; color: var(--text-muted); }
-.update-val { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+  border: 4px solid rgba(56, 189, 248, 0.15);
+
+  border-top-color: var(--accent-sky);
+
+  border-radius: 50%;
+
+  animation: spinAnim 0.75s linear infinite;
+
+  margin-bottom: 18px;
+}
+
+@keyframes spinAnim {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#loading-state h3 {
+  font-size: 1.15rem;
+
+  font-weight: 600;
+
+  color: var(--accent-sky);
+
+  margin-bottom: 6px;
+}
+
+#loading-state p {
+  color: var(--text-muted);
+
+  font-size: 0.82rem;
+}
+
+
+/* ==========================================================================
+   15. City Summary
+   ========================================================================== */
+
+.city-summary-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-end;
+
+  margin-bottom: 16px;
+}
+
+.city-region-tag {
+  font-size: 0.72rem;
+
+  font-weight: 700;
+
+  color: var(--accent-sky);
+
+  letter-spacing: 0.04em;
+
+  text-transform: uppercase;
+}
+
+.city-title {
+  font-size: 1.8rem;
+
+  font-weight: 800;
+
+  letter-spacing: -0.02em;
+}
+
+.city-update-box {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-end;
+}
+
+.update-lbl {
+  font-size: 0.7rem;
+
+  color: var(--text-muted);
+}
+
+.update-val {
+  font-size: 0.8rem;
+
+  color: var(--text-secondary);
+
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   16. Weather Hero Card
+   ========================================================================== */
 
 .weather-hero-card {
-  background: linear-gradient(135deg, rgba(30,41,59,0.85), rgba(15,23,42,0.95));
-  border: 1px solid var(--panel-border); border-radius: var(--radius-lg);
-  padding: 18px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-}
-.weather-hero-main { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.weather-hero-icon { font-size: 2.8rem; }
-.weather-hero-desc { font-size: 1.3rem; font-weight: 700; color: #fff; }
-.weather-hero-comfort {
-  display: inline-block; margin-top: 3px; font-size: 0.76rem; font-weight: 600;
-  background: rgba(99,102,241,0.25); color: #c7d2fe; padding: 2px 10px;
-  border-radius: 9999px; border: 1px solid rgba(99,102,241,0.4);
-}
-.weather-hero-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; }
-.metric-item { display: flex; flex-direction: column; }
-.metric-label { font-size: 0.72rem; color: var(--text-muted); }
-.metric-val { font-size: 1.15rem; font-weight: 700; color: #fff; }
-.rain-val { color: var(--accent-sky); }
+  background:
+    linear-gradient(135deg,
+      rgba(30, 41, 59, 0.85) 0%,
+      rgba(15, 23, 42, 0.95) 100%);
 
-/* Forecast Intervals & Bar Charts */
-.forecasts-container { display: flex; flex-direction: column; gap: 14px; }
-.forecast-section-title { display: flex; justify-content: space-between; align-items: center; }
-.forecast-section-title h3 { font-size: 0.95rem; font-weight: 600; }
-.badge-dynamic { font-size: 0.68rem; font-weight: 600; background: rgba(56,189,248,0.15); color: var(--accent-sky); padding: 3px 8px; border-radius: 4px; }
-.intervals-grid { display: flex; flex-direction: column; gap: 14px; }
-.interval-card {
-  background: rgba(15,23,42,0.7); border: 1px solid var(--panel-border);
-  border-radius: var(--radius-md); padding: 14px 16px; transition: var(--transition);
+  border: 1px solid var(--panel-border);
+
+  border-radius: var(--radius-lg);
+
+  padding: 18px;
+
+  margin-bottom: 20px;
+
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.35);
 }
-.interval-card:hover { border-color: var(--panel-border-hover); background: rgba(15,23,42,0.9); }
-.interval-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.interval-time { font-size: 0.85rem; font-weight: 700; color: var(--accent-sky); }
-.interval-weather { font-size: 0.82rem; font-weight: 600; color: #e2e8f0; }
 
-.bar-chart-group { display: flex; flex-direction: column; gap: 8px; }
-.bar-row { display: grid; grid-template-columns: 70px 1fr 55px; align-items: center; gap: 10px; }
-.bar-label { font-size: 0.76rem; color: var(--text-muted); font-weight: 500; }
-.bar-track { height: 9px; background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 9999px; width: 0%; transition: width 0.7s cubic-bezier(0.16,1,0.3,1); }
-.bar-fill.bar-maxt { background: linear-gradient(90deg, #f97316, #ef4444); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
-.bar-fill.bar-mint { background: linear-gradient(90deg, #06b6d4, #3b82f6); box-shadow: 0 0 8px rgba(59,130,246,0.4); }
-.bar-fill.bar-pop  { background: linear-gradient(90deg, #38bdf8, #2563eb); box-shadow: 0 0 8px rgba(56,189,248,0.4); }
-.bar-val { font-size: 0.82rem; font-weight: 700; text-align: right; color: var(--text-primary); }
+.weather-hero-main {
+  display: flex;
 
-/* Leaflet temp badge labels */
-.leaflet-temp-label {
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  font-family: 'Inter', 'Noto Sans TC', sans-serif;
-  font-size: 13px;
-  font-weight: 800;
+  align-items: center;
+
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+.weather-hero-icon {
+  font-size: 2.8rem;
+}
+
+.weather-hero-desc {
+  font-size: 1.3rem;
+
+  font-weight: 700;
+
   color: #ffffff;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.8);
-  text-align: center;
-  line-height: 1.2;
-  pointer-events: none !important;
 }
 
-/* ======== RWD ======== */
+.weather-hero-comfort {
+  display: inline-block;
+
+  margin-top: 3px;
+
+  font-size: 0.76rem;
+
+  font-weight: 600;
+
+  background: rgba(99, 102, 241, 0.25);
+
+  color: #c7d2fe;
+
+  padding: 2px 10px;
+
+  border-radius: 9999px;
+
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.weather-hero-metrics {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 12px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  padding-top: 12px;
+}
+
+.metric-item {
+  display: flex;
+
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+
+  color: var(--text-muted);
+}
+
+.metric-val {
+  font-size: 1.15rem;
+
+  font-weight: 700;
+
+  color: #ffffff;
+}
+
+.rain-val {
+  color: var(--accent-sky);
+}
+
+
+/* ==========================================================================
+   17. Forecast Section
+   ========================================================================== */
+
+.forecasts-container {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+}
+
+.forecast-section-title {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+}
+
+.forecast-section-title h3 {
+  font-size: 0.95rem;
+
+  font-weight: 600;
+}
+
+.badge-dynamic {
+  font-size: 0.68rem;
+
+  font-weight: 600;
+
+  background: rgba(56, 189, 248, 0.15);
+
+  color: var(--accent-sky);
+
+  padding: 3px 8px;
+
+  border-radius: 4px;
+}
+
+
+/* ==========================================================================
+   18. Forecast Interval Cards
+   ========================================================================== */
+
+.intervals-grid {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+}
+
+.interval-card {
+  background: rgba(15, 23, 42, 0.7);
+
+  border: 1px solid var(--panel-border);
+
+  border-radius: var(--radius-md);
+
+  padding: 14px 16px;
+
+  transition: var(--transition);
+}
+
+.interval-card:hover {
+  border-color: var(--panel-border-hover);
+
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.interval-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 12px;
+}
+
+.interval-time {
+  font-size: 0.85rem;
+
+  font-weight: 700;
+
+  color: var(--accent-sky);
+}
+
+.interval-weather {
+  font-size: 0.82rem;
+
+  font-weight: 600;
+
+  color: #e2e8f0;
+}
+
+
+/* ==========================================================================
+   19. Dynamic Bar Charts
+   ========================================================================== */
+
+.bar-chart-group {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.bar-row {
+  display: grid;
+
+  grid-template-columns: 70px 1fr 55px;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
+.bar-label {
+  font-size: 0.76rem;
+
+  color: var(--text-muted);
+
+  font-weight: 500;
+}
+
+.bar-track {
+  height: 9px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  border-radius: 9999px;
+
+  overflow: hidden;
+
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+
+  border-radius: 9999px;
+
+  width: 0%;
+
+  transition:
+    width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bar-fill.bar-maxt {
+  background:
+    linear-gradient(90deg,
+      #f97316 0%,
+      #ef4444 100%);
+
+  box-shadow:
+    0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.bar-fill.bar-mint {
+  background:
+    linear-gradient(90deg,
+      #06b6d4 0%,
+      #3b82f6 100%);
+
+  box-shadow:
+    0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+.bar-fill.bar-pop {
+  background:
+    linear-gradient(90deg,
+      #38bdf8 0%,
+      #2563eb 100%);
+
+  box-shadow:
+    0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.bar-val {
+  font-size: 0.82rem;
+
+  font-weight: 700;
+
+  text-align: right;
+
+  color: var(--text-primary);
+}
+
+
+/* ==========================================================================
+   20. Leaflet County / Weather Overlay
+   ========================================================================== */
+
+/*
+ * Leaflet GeoJSON path
+ * 實際顏色由 app.js 的 getTempColor / getRainColor 控制
+ */
+
+.leaflet-interactive {
+  transition:
+    fill-opacity 0.2s ease,
+    stroke-width 0.2s ease,
+    filter 0.2s ease;
+}
+
+.leaflet-interactive:hover {
+  filter:
+    drop-shadow(0 0 8px rgba(56, 189, 248, 0.8));
+}
+
+
+/* ==========================================================================
+   21. Temperature Labels
+   ========================================================================== */
+
+.weather-temp-label {
+  background: rgba(3, 7, 18, 0.82);
+
+  color: #ffffff;
+
+  border: 1px solid rgba(56, 189, 248, 0.4);
+
+  border-radius: 9999px;
+
+  padding: 3px 7px;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.45);
+
+  backdrop-filter: blur(8px);
+}
+
+.weather-temp-label::before {
+  display: none;
+}
+
+
+/* ==========================================================================
+   22. Utility Classes
+   ========================================================================== */
+
+.hidden {
+  display: none !important;
+}
+
+
+/* ==========================================================================
+   23. Responsive - Tablet
+   ========================================================================== */
+
 @media (max-width: 900px) {
+
   .floating-drawer {
-    top: auto; left: 0; right: 0; bottom: 0;
-    width: 100%; max-width: 100%; max-height: 65vh;
+    top: auto;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    width: 100%;
+
+    max-width: 100%;
+
+    max-height: 65vh;
+
     border-radius: 20px 20px 0 0;
   }
-  .floating-drawer.collapsed { transform: translateY(100%); }
-  .controls-panel { top: 76px; right: 12px; width: 180px; padding: 12px; }
-  .legend-panel { bottom: 12px; right: 12px; width: 220px; }
-  .floating-nav { top: 10px; left: 10px; right: 10px; padding: 8px 14px; }
-  .brand-title { font-size: 0.95rem; }
-  .brand-subtitle { display: none; }
+
+  .floating-drawer.collapsed {
+    transform: translateY(100%);
+  }
+
+  .controls-panel {
+    top: 76px;
+
+    right: 12px;
+
+    width: 180px;
+
+    padding: 12px;
+  }
+
+  .legend-panel {
+    bottom: 12px;
+
+    right: 12px;
+
+    width: 220px;
+  }
+
+  .floating-nav {
+    top: 10px;
+
+    left: 10px;
+    right: 10px;
+
+    padding: 8px 14px;
+  }
+
+  .brand-title {
+    font-size: 0.95rem;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
 }
+
+
+/* ==========================================================================
+   24. Responsive - Mobile
+   ========================================================================== */
+
+@media (max-width: 600px) {
+
+  .floating-nav {
+    padding: 8px 10px;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .brand-icon {
+    font-size: 1.4rem;
+  }
+
+  .brand-title {
+    font-size: 0.85rem;
+  }
+
+  .status-indicator {
+    display: none;
+  }
+
+  .btn-glass {
+    padding: 6px 9px;
+
+    font-size: 0.75rem;
+  }
+
+  .controls-panel {
+    top: 65px;
+
+    right: 8px;
+
+    width: 160px;
+
+    padding: 10px;
+  }
+
+  .layer-btn {
+    padding: 7px 9px;
+
+    font-size: 0.78rem;
+  }
+
+  .legend-panel {
+    bottom: 8px;
+
+    left: 8px;
+    right: 8px;
+
+    width: auto;
+  }
+
+  .floating-drawer {
+    max-height: 70vh;
+  }
+
+  .drawer-content-scroll {
+    padding: 14px;
+  }
+
+  .city-title {
+    font-size: 1.5rem;
+  }
+
+  .weather-hero-card {
+    padding: 14px;
+  }
+
+  .bar-row {
+    grid-template-columns: 60px 1fr 45px;
+
+    gap: 7px;
+  }
+}
+
+
+/* ==========================================================================
+   25. Leaflet Pane Layering
+   ========================================================================== */
+
+.leaflet-map-pane {
+  z-index: 400;
+}
+
+.leaflet-tile-pane {
+  z-index: 200;
+}
+
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+
+.leaflet-shadow-pane {
+  z-index: 500;
+}
+
+.leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+
+.leaflet-popup-pane {
+  z-index: 700;
+}
+
+
+/* ==========================================================================
+   END
+   ========================================================================== */

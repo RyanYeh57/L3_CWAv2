@@ -25,54 +25,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
   //  DOM refs
   // ==========================================================================
-  const weatherDrawer     = document.getElementById("weather-drawer");
-  const closeDrawerBtn    = document.getElementById("close-drawer-btn");
-  const toggleDrawerBtn   = document.getElementById("toggle-drawer-btn");
-  const btnLoadAll        = document.getElementById("btn-load-all");
-  const toggleBoundaries  = document.getElementById("toggle-boundaries");
-  const toggleTempBadges  = document.getElementById("toggle-temp-badges");
-  const layerButtons      = document.querySelectorAll(".layer-btn");
-  const legendUnitText    = document.getElementById("legend-unit-text");
-  const legendHintText    = document.getElementById("legend-hint-text");
-  const legendBar         = document.getElementById("legend-bar");
-  const legendLabels      = document.getElementById("legend-labels");
+  const weatherDrawer = document.getElementById("weather-drawer");
+  const closeDrawerBtn = document.getElementById("close-drawer-btn");
+  const toggleDrawerBtn = document.getElementById("toggle-drawer-btn");
+  const btnLoadAll = document.getElementById("btn-load-all");
+  const toggleBoundaries = document.getElementById("toggle-boundaries");
+  const toggleTempBadges = document.getElementById("toggle-temp-badges");
+  const layerButtons = document.querySelectorAll(".layer-btn");
+  const legendUnitText = document.getElementById("legend-unit-text");
+  const legendHintText = document.getElementById("legend-hint-text");
+  const legendBar = document.getElementById("legend-bar");
+  const legendLabels = document.getElementById("legend-labels");
 
-  const initialState    = document.getElementById("initial-state");
-  const loadingState    = document.getElementById("loading-state");
-  const errorState      = document.getElementById("error-state");
-  const contentState    = document.getElementById("content-state");
-  const loadingText     = document.getElementById("loading-text");
-  const errorTitle      = document.getElementById("error-title");
-  const errorDesc       = document.getElementById("error-desc");
-  const retryBtn        = document.getElementById("retry-btn");
+  const initialState = document.getElementById("initial-state");
+  const loadingState = document.getElementById("loading-state");
+  const errorState = document.getElementById("error-state");
+  const contentState = document.getElementById("content-state");
+  const loadingText = document.getElementById("loading-text");
+  const errorTitle = document.getElementById("error-title");
+  const errorDesc = document.getElementById("error-desc");
+  const retryBtn = document.getElementById("retry-btn");
 
-  const currentCityName   = document.getElementById("current-city-name");
-  const cityRegion        = document.getElementById("city-region");
-  const updateTimestamp   = document.getElementById("update-timestamp");
+  const currentCityName = document.getElementById("current-city-name");
+  const cityRegion = document.getElementById("city-region");
+  const updateTimestamp = document.getElementById("update-timestamp");
   const summaryWeatherDesc = document.getElementById("summary-weather-desc");
   const summaryWeatherIcon = document.getElementById("summary-weather-icon");
-  const summaryComfort    = document.getElementById("summary-comfort");
-  const summaryTempRange  = document.getElementById("summary-temp-range");
-  const summaryPop        = document.getElementById("summary-pop");
+  const summaryComfort = document.getElementById("summary-comfort");
+  const summaryTempRange = document.getElementById("summary-temp-range");
+  const summaryPop = document.getElementById("summary-pop");
   const forecastIntervalsContainer = document.getElementById("forecast-intervals-container");
 
   // ==========================================================================
   //  Constants & Helpers
   // ==========================================================================
   const REGION_MAP = {
-    "基隆市":"北部地區","臺北市":"北部地區","新北市":"北部地區","桃園市":"北部地區",
-    "新竹市":"北部地區","新竹縣":"北部地區","宜蘭縣":"北部地區",
-    "苗栗縣":"中部地區","臺中市":"中部地區","彰化縣":"中部地區",
-    "南投縣":"中部地區","雲林縣":"中部地區",
-    "嘉義市":"南部地區","嘉義縣":"南部地區","臺南市":"南部地區",
-    "高雄市":"南部地區","屏東縣":"南部地區",
-    "花蓮縣":"東部地區","臺東縣":"東部地區",
-    "澎湖縣":"離島地區","金門縣":"離島地區","連江縣":"離島地區"
+    "基隆市": "北部地區", "臺北市": "北部地區", "新北市": "北部地區", "桃園市": "北部地區",
+    "新竹市": "北部地區", "新竹縣": "北部地區", "宜蘭縣": "北部地區",
+    "苗栗縣": "中部地區", "臺中市": "中部地區", "彰化縣": "中部地區",
+    "南投縣": "中部地區", "雲林縣": "中部地區",
+    "嘉義市": "南部地區", "嘉義縣": "南部地區", "臺南市": "南部地區",
+    "高雄市": "南部地區", "屏東縣": "南部地區",
+    "花蓮縣": "東部地區", "臺東縣": "東部地區",
+    "澎湖縣": "離島地區", "金門縣": "離島地區", "連江縣": "離島地區"
   };
 
   // GeoJSON COUNTYNAME → 系統 CWA 名稱 (處理「台」vs「臺」問題)
   const NAME_ALIAS = {
-    "台北市":"臺北市","台中市":"臺中市","台南市":"臺南市","台東縣":"臺東縣"
+    "台北市": "臺北市", "台中市": "臺中市", "台南市": "臺南市", "台東縣": "臺東縣"
   };
   function normalizeCityName(n) { return NAME_ALIAS[n] || n; }
 
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getTempColor(t) {
-    if (t <=  5) return "#2c7bb6";
+    if (t <= 5) return "#2c7bb6";
     if (t <= 10) return "#5aa2cf";
     if (t <= 15) return "#abd9e9";
     if (t <= 20) return "#7fcdbb";
@@ -117,16 +117,23 @@ document.addEventListener("DOMContentLoaded", () => {
     attributionControl: false
   });
 
-  // CartoDB Dark Matter tiles (dark style for Windy aesthetic)
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/">CARTO</a>',
-    subdomains: "abcd",
-    maxZoom: 18
+  // CARTO Voyager
+  L.tileLayer(
+    "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3v36_1_fda4eba4a7c33c44504087c6",
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/">CARTO</a>',
+      maxZoom: 18
+    }
+  ).addTo(map);
+
+  L.control.attribution({
+    position: "bottomleft"
   }).addTo(map);
 
-  // Attribution bottom-left
-  L.control.attribution({ position: "bottomleft" }).addTo(map);
-  L.control.zoom({ position: "bottomleft" }).addTo(map);
+  L.control.zoom({
+    position: "bottomleft"
+  }).addTo(map);
 
   // ==========================================================================
   //  2. Load Counties GeoJSON
@@ -228,18 +235,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) {
         const detail = data && data.detail ? data.detail : "";
-        if (res.status === 404)           showError("找不到指定縣市", "請選擇有效的台灣 22 縣市。");
+        if (res.status === 404) showError("找不到指定縣市", "請選擇有效的台灣 22 縣市。");
         else if (detail.includes("CWA_API_KEY")) showError("系統尚未設定 CWA_API_KEY", "請於 .env 設定有效的 CWA_API_KEY。");
-        else if (detail.includes("資料庫"))      showError("資料庫讀取失敗", "SQLite 資料庫無法完成查詢或儲存。");
-        else                                     showError("無法取得氣象資料", detail || "請檢查網路連線或 API 金鑰配置。");
+        else if (detail.includes("資料庫")) showError("資料庫讀取失敗", "SQLite 資料庫無法完成查詢或儲存。");
+        else showError("無法取得氣象資料", detail || "請檢查網路連線或 API 金鑰配置。");
         return;
       }
 
       if (data.forecasts && data.forecasts.length > 0) {
         const f = data.forecasts[0];
         const avg = Math.round((f.min_temp + f.max_temp) / 2);
-        state.cityTemps[cityName]    = avg;
-        state.cityPops[cityName]     = f.pop;
+        state.cityTemps[cityName] = avg;
+        state.cityPops[cityName] = f.pop;
         state.cityWeathers[cityName] = f.weather;
         applyCurrentLayerColorsSingle(cityName);
         updateTempLabels();
@@ -260,16 +267,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!forecasts.length) { showError("無可用預報資料", "目前該縣市查無有效時段預報。"); return; }
 
     const first = forecasts[0];
-    const city  = data.city;
+    const city = data.city;
 
-    currentCityName.textContent   = city;
-    cityRegion.textContent        = REGION_MAP[city] || "台灣縣市";
-    updateTimestamp.textContent    = new Date().toLocaleTimeString("zh-TW", { hour:"2-digit", minute:"2-digit" });
+    currentCityName.textContent = city;
+    cityRegion.textContent = REGION_MAP[city] || "台灣縣市";
+    updateTimestamp.textContent = new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
     summaryWeatherDesc.textContent = first.weather || "多雲";
     summaryWeatherIcon.textContent = getWeatherIcon(first.weather);
-    summaryComfort.textContent     = first.comfort || "舒適";
-    summaryTempRange.textContent   = `${first.min_temp}°C ~ ${first.max_temp}°C`;
-    summaryPop.textContent         = `${first.pop}%`;
+    summaryComfort.textContent = first.comfort || "舒適";
+    summaryTempRange.textContent = `${first.min_temp}°C ~ ${first.max_temp}°C`;
+    summaryPop.textContent = `${first.pop}%`;
 
     forecastIntervalsContainer.innerHTML = "";
     forecasts.forEach((f, i) => forecastIntervalsContainer.appendChild(createBarCard(f, i)));
@@ -285,14 +292,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = document.createElement("div");
     card.className = "interval-card";
     const s = f.start_time ? f.start_time.substring(5) : "";
-    const e = f.end_time   ? f.end_time.substring(5)   : "";
+    const e = f.end_time ? f.end_time.substring(5) : "";
     const mxW = Math.min(100, Math.max(5, (f.max_temp / 45) * 100));
     const mnW = Math.min(100, Math.max(5, (f.min_temp / 45) * 100));
     const ppW = Math.min(100, Math.max(2, f.pop));
     card.innerHTML = `
       <div class="interval-header">
-        <span class="interval-time">🕒 時段 ${idx+1}：${s} ~ ${e}</span>
-        <span class="interval-weather">${getWeatherIcon(f.weather)} ${f.weather}（${f.comfort||"舒適"}）</span>
+        <span class="interval-time">🕒 時段 ${idx + 1}：${s} ~ ${e}</span>
+        <span class="interval-weather">${getWeatherIcon(f.weather)} ${f.weather}（${f.comfort || "舒適"}）</span>
       </div>
       <div class="bar-chart-group">
         <div class="bar-row"><span class="bar-label">最高溫</span><div class="bar-track"><div class="bar-fill bar-maxt" data-target-width="${mxW.toFixed(1)}%"></div></div><span class="bar-val">${f.max_temp}°C</span></div>
@@ -309,7 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnLoadAll.disabled = true;
     btnLoadAll.innerHTML = "<span>⏳ 正在同步全台資料...</span>";
     try {
-      const res  = await fetch("/api/weather");
+      const res = await fetch("/api/weather");
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "無法取得全台資料");
 
@@ -319,8 +326,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const c = f.city;
         if (!seen[c]) {
           seen[c] = true;
-          state.cityTemps[c]    = Math.round((f.min_temp + f.max_temp) / 2);
-          state.cityPops[c]     = f.pop;
+          state.cityTemps[c] = Math.round((f.min_temp + f.max_temp) / 2);
+          state.cityPops[c] = f.pop;
           state.cityWeathers[c] = f.weather;
         }
       });
@@ -382,9 +389,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const cn = l.feature.properties._cwaCityName;
       let text = "";
       if (state.currentLayer === "temp" && state.cityTemps[cn] !== undefined) {
-        text = `${cn.replace("市","").replace("縣","")}\n${state.cityTemps[cn]}°`;
+        text = `${cn.replace("市", "").replace("縣", "")}\n${state.cityTemps[cn]}°`;
       } else if (state.currentLayer === "rain" && state.cityPops[cn] !== undefined) {
-        text = `${cn.replace("市","").replace("縣","")}\n${state.cityPops[cn]}%`;
+        text = `${cn.replace("市", "").replace("縣", "")}\n${state.cityPops[cn]}%`;
       } else if (state.currentLayer === "weather" && state.cityWeathers[cn]) {
         text = `${getWeatherIcon(state.cityWeathers[cn])}`;
       }
@@ -448,8 +455,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
   //  10. Drawer Controls
   // ==========================================================================
-  function openDrawer()  { weatherDrawer.classList.remove("collapsed"); state.isDrawerOpen = true; }
-  function closeDrawer() { weatherDrawer.classList.add("collapsed");    state.isDrawerOpen = false; }
+  function openDrawer() { weatherDrawer.classList.remove("collapsed"); state.isDrawerOpen = true; }
+  function closeDrawer() { weatherDrawer.classList.add("collapsed"); state.isDrawerOpen = false; }
   closeDrawerBtn.addEventListener("click", closeDrawer);
   toggleDrawerBtn.addEventListener("click", () => state.isDrawerOpen ? closeDrawer() : openDrawer());
 
