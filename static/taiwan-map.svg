@@ -1,0 +1,297 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="100%" height="100%" class="taiwan-svg-map">
+  <defs>
+    <filter id="map-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="badge-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- 離島區外框標示 -->
+  <g class="islands-box">
+    <!-- 連江縣 (馬祖) 區域框 -->
+    <rect x="20" y="30" width="120" height="90" rx="8" class="island-frame" />
+    <text x="30" y="48" class="island-title">連江縣 (馬祖)</text>
+    
+    <!-- 金門縣 區域框 -->
+    <rect x="20" y="135" width="120" height="100" rx="8" class="island-frame" />
+    <text x="30" y="153" class="island-title">金門縣</text>
+
+    <!-- 澎湖縣 區域框 -->
+    <rect x="20" y="380" width="130" height="150" rx="8" class="island-frame" />
+    <text x="30" y="398" class="island-title">澎湖縣</text>
+  </g>
+
+  <!-- 22 縣市路徑群組 (支援動態熱力著色) -->
+  <g class="counties-group" filter="url(#map-glow)">
+
+    <!-- 1. 基隆市 (TW-KEE) -->
+    <path id="TW-KEE" class="city-path" data-city="基隆市" data-id="TW-KEE"
+          d="M 445 95 L 460 90 L 468 102 L 452 110 L 442 104 Z">
+      <title>基隆市</title>
+    </path>
+
+    <!-- 2. 臺北市 (TW-TPE) -->
+    <path id="TW-TPE" class="city-path" data-city="臺北市" data-id="TW-TPE"
+          d="M 415 105 L 435 98 L 445 108 L 438 130 L 418 128 L 412 115 Z">
+      <title>臺北市</title>
+    </path>
+
+    <!-- 3. 新北市 (TW-NWT) -->
+    <path id="TW-NWT" class="city-path" data-city="新北市" data-id="TW-NWT"
+          d="M 400 80 L 445 75 L 475 90 L 485 120 L 460 155 L 420 160 L 395 135 L 412 115 L 418 128 L 438 130 L 445 108 L 435 98 L 415 105 L 405 95 Z">
+      <title>新北市</title>
+    </path>
+
+    <!-- 4. 桃園市 (TW-TAO) -->
+    <path id="TW-TAO" class="city-path" data-city="桃園市" data-id="TW-TAO"
+          d="M 360 110 L 400 80 L 405 95 L 395 135 L 390 175 L 365 170 L 350 140 Z">
+      <title>桃園市</title>
+    </path>
+
+    <!-- 5. 新竹市 (TW-HSZ) -->
+    <path id="TW-HSZ" class="city-path" data-city="新竹市" data-id="TW-HSZ"
+          d="M 328 145 L 345 140 L 348 158 L 332 162 Z">
+      <title>新竹市</title>
+    </path>
+
+    <!-- 6. 新竹縣 (TW-HSQ) -->
+    <path id="TW-HSQ" class="city-path" data-city="新竹縣" data-id="TW-HSQ"
+          d="M 345 140 L 365 170 L 390 175 L 380 215 L 348 200 L 348 158 Z">
+      <title>新竹縣</title>
+    </path>
+
+    <!-- 7. 苗栗縣 (TW-MIA) -->
+    <path id="TW-MIA" class="city-path" data-city="苗栗縣" data-id="TW-MIA"
+          d="M 310 180 L 348 158 L 348 200 L 375 220 L 355 255 L 305 230 L 298 195 Z">
+      <title>苗栗縣</title>
+    </path>
+
+    <!-- 8. 臺中市 (TW-TXG) -->
+    <path id="TW-TXG" class="city-path" data-city="臺中市" data-id="TW-TXG"
+          d="M 285 240 L 305 230 L 355 255 L 405 260 L 395 295 L 330 300 L 280 275 Z">
+      <title>臺中市</title>
+    </path>
+
+    <!-- 9. 彰化縣 (TW-CHA) -->
+    <path id="TW-CHA" class="city-path" data-city="彰化縣" data-id="TW-CHA"
+          d="M 260 280 L 310 285 L 300 335 L 255 330 L 250 295 Z">
+      <title>彰化縣</title>
+    </path>
+
+    <!-- 10. 南投縣 (TW-NAN) -->
+    <path id="TW-NAN" class="city-path" data-city="南投縣" data-id="TW-NAN"
+          d="M 310 285 L 395 295 L 400 380 L 355 410 L 315 385 L 300 335 Z">
+      <title>南投縣</title>
+    </path>
+
+    <!-- 11. 雲林縣 (TW-YUN) -->
+    <path id="TW-YUN" class="city-path" data-city="雲林縣" data-id="TW-YUN"
+          d="M 235 340 L 300 335 L 315 385 L 275 395 L 225 380 Z">
+      <title>雲林縣</title>
+    </path>
+
+    <!-- 12. 嘉義市 (TW-CYI) -->
+    <path id="TW-CYI" class="city-path" data-city="嘉義市" data-id="TW-CYI"
+          d="M 270 410 L 288 408 L 290 425 L 272 426 Z">
+      <title>嘉義市</title>
+    </path>
+
+    <!-- 13. 嘉義縣 (TW-CYQ) -->
+    <path id="TW-CYQ" class="city-path" data-city="嘉義縣" data-id="TW-CYQ"
+          d="M 220 395 L 275 395 L 315 385 L 345 425 L 320 455 L 265 445 L 215 435 L 220 395 M 270 410 L 272 426 L 290 425 L 288 408 Z">
+      <title>嘉義縣</title>
+    </path>
+
+    <!-- 14. 臺南市 (TW-TNN) -->
+    <path id="TW-TNN" class="city-path" data-city="臺南市" data-id="TW-TNN"
+          d="M 210 445 L 265 445 L 305 465 L 295 515 L 230 520 L 205 475 Z">
+      <title>臺南市</title>
+    </path>
+
+    <!-- 15. 高雄市 (TW-KHH) -->
+    <path id="TW-KHH" class="city-path" data-city="高雄市" data-id="TW-KHH"
+          d="M 295 515 L 305 465 L 345 425 L 360 450 L 340 520 L 300 580 L 250 585 L 235 550 L 230 520 Z">
+      <title>高雄市</title>
+    </path>
+
+    <!-- 16. 屏東縣 (TW-PIF) -->
+    <path id="TW-PIF" class="city-path" data-city="屏東縣" data-id="TW-PIF"
+          d="M 275 585 L 325 570 L 345 640 L 330 720 L 305 725 L 275 645 Z">
+      <title>屏東縣</title>
+    </path>
+
+    <!-- 17. 宜蘭縣 (TW-ILA) -->
+    <path id="TW-ILA" class="city-path" data-city="宜蘭縣" data-id="TW-ILA"
+          d="M 420 160 L 460 155 L 490 200 L 450 250 L 405 240 L 390 175 Z">
+      <title>宜蘭縣</title>
+    </path>
+
+    <!-- 18. 花蓮縣 (TW-HUA) -->
+    <path id="TW-HUA" class="city-path" data-city="花蓮縣" data-id="TW-HUA"
+          d="M 405 240 L 450 250 L 455 350 L 420 460 L 375 460 L 370 410 L 400 380 L 395 295 L 405 260 Z">
+      <title>花蓮縣</title>
+    </path>
+
+    <!-- 19. 臺東縣 (TW-TTT) -->
+    <path id="TW-TTT" class="city-path" data-city="臺東縣" data-id="TW-TTT"
+          d="M 375 460 L 420 460 L 395 580 L 350 670 L 330 670 L 345 560 L 360 450 Z">
+      <title>臺東縣</title>
+    </path>
+
+    <!-- 20. 澎湖縣 (TW-PEN) -->
+    <path id="TW-PEN" class="city-path island" data-city="澎湖縣" data-id="TW-PEN"
+          d="M 70 440 L 95 430 L 105 455 L 90 490 L 65 475 Z M 50 470 L 60 460 L 65 480 Z M 85 500 L 100 515 L 85 525 Z">
+      <title>澎湖縣</title>
+    </path>
+
+    <!-- 21. 金門縣 (TW-KIN) -->
+    <path id="TW-KIN" class="city-path island" data-city="金門縣" data-id="TW-KIN"
+          d="M 45 180 L 75 170 L 95 185 L 110 175 L 115 195 L 80 215 L 40 205 Z M 30 195 L 40 190 L 42 205 L 32 208 Z">
+      <title>金門縣</title>
+    </path>
+
+    <!-- 22. 連江縣 (TW-LIE) -->
+    <path id="TW-LIE" class="city-path island" data-city="連江縣" data-id="TW-LIE"
+          d="M 50 65 L 75 60 L 80 75 L 55 80 Z M 95 65 L 110 60 L 115 72 L 100 78 Z M 70 95 L 85 90 L 88 102 L 72 105 Z">
+      <title>連江縣</title>
+    </path>
+
+  </g>
+
+  <!-- 縣市名稱與即時氣溫標籤 (類 Windy 數字徽章) -->
+  <g class="city-labels" pointer-events="none">
+    <!-- 基隆 -->
+    <g class="city-badge-group" transform="translate(455, 103)">
+      <text class="map-label">基隆</text>
+      <text class="temp-badge-text" data-temp-city="基隆市" y="14"></text>
+    </g>
+
+    <!-- 臺北 -->
+    <g class="city-badge-group" transform="translate(425, 117)">
+      <text class="map-label">臺北</text>
+      <text class="temp-badge-text" data-temp-city="臺北市" y="14"></text>
+    </g>
+
+    <!-- 新北 -->
+    <g class="city-badge-group" transform="translate(445, 145)">
+      <text class="map-label">新北</text>
+      <text class="temp-badge-text" data-temp-city="新北市" y="14"></text>
+    </g>
+
+    <!-- 桃園 -->
+    <g class="city-badge-group" transform="translate(375, 130)">
+      <text class="map-label">桃園</text>
+      <text class="temp-badge-text" data-temp-city="桃園市" y="14"></text>
+    </g>
+
+    <!-- 新竹市 -->
+    <g class="city-badge-group" transform="translate(338, 153)">
+      <text class="map-label">新竹市</text>
+      <text class="temp-badge-text" data-temp-city="新竹市" y="14"></text>
+    </g>
+
+    <!-- 新竹縣 -->
+    <g class="city-badge-group" transform="translate(365, 185)">
+      <text class="map-label">新竹縣</text>
+      <text class="temp-badge-text" data-temp-city="新竹縣" y="14"></text>
+    </g>
+
+    <!-- 苗栗 -->
+    <g class="city-badge-group" transform="translate(325, 210)">
+      <text class="map-label">苗栗</text>
+      <text class="temp-badge-text" data-temp-city="苗栗縣" y="14"></text>
+    </g>
+
+    <!-- 臺中 -->
+    <g class="city-badge-group" transform="translate(330, 270)">
+      <text class="map-label highlight">臺中</text>
+      <text class="temp-badge-text" data-temp-city="臺中市" y="14"></text>
+    </g>
+
+    <!-- 彰化 -->
+    <g class="city-badge-group" transform="translate(275, 305)">
+      <text class="map-label">彰化</text>
+      <text class="temp-badge-text" data-temp-city="彰化縣" y="14"></text>
+    </g>
+
+    <!-- 南投 -->
+    <g class="city-badge-group" transform="translate(345, 345)">
+      <text class="map-label">南投</text>
+      <text class="temp-badge-text" data-temp-city="南投縣" y="14"></text>
+    </g>
+
+    <!-- 雲林 -->
+    <g class="city-badge-group" transform="translate(260, 365)">
+      <text class="map-label">雲林</text>
+      <text class="temp-badge-text" data-temp-city="雲林縣" y="14"></text>
+    </g>
+
+    <!-- 嘉市 -->
+    <g class="city-badge-group" transform="translate(278, 417)">
+      <text class="map-label">嘉市</text>
+      <text class="temp-badge-text" data-temp-city="嘉義市" y="14"></text>
+    </g>
+
+    <!-- 嘉義縣 -->
+    <g class="city-badge-group" transform="translate(245, 415)">
+      <text class="map-label">嘉義縣</text>
+      <text class="temp-badge-text" data-temp-city="嘉義縣" y="14"></text>
+    </g>
+
+    <!-- 臺南 -->
+    <g class="city-badge-group" transform="translate(245, 480)">
+      <text class="map-label">臺南</text>
+      <text class="temp-badge-text" data-temp-city="臺南市" y="14"></text>
+    </g>
+
+    <!-- 高雄 -->
+    <g class="city-badge-group" transform="translate(285, 535)">
+      <text class="map-label">高雄</text>
+      <text class="temp-badge-text" data-temp-city="高雄市" y="14"></text>
+    </g>
+
+    <!-- 屏東 -->
+    <g class="city-badge-group" transform="translate(300, 640)">
+      <text class="map-label">屏東</text>
+      <text class="temp-badge-text" data-temp-city="屏東縣" y="14"></text>
+    </g>
+
+    <!-- 宜蘭 -->
+    <g class="city-badge-group" transform="translate(440, 195)">
+      <text class="map-label">宜蘭</text>
+      <text class="temp-badge-text" data-temp-city="宜蘭縣" y="14"></text>
+    </g>
+
+    <!-- 花蓮 -->
+    <g class="city-badge-group" transform="translate(415, 330)">
+      <text class="map-label">花蓮</text>
+      <text class="temp-badge-text" data-temp-city="花蓮縣" y="14"></text>
+    </g>
+
+    <!-- 臺東 -->
+    <g class="city-badge-group" transform="translate(375, 540)">
+      <text class="map-label">臺東</text>
+      <text class="temp-badge-text" data-temp-city="臺東縣" y="14"></text>
+    </g>
+
+    <!-- 澎湖 -->
+    <g class="city-badge-group" transform="translate(80, 470)">
+      <text class="map-label island-lbl">澎湖</text>
+      <text class="temp-badge-text" data-temp-city="澎湖縣" y="14"></text>
+    </g>
+
+    <!-- 金門 -->
+    <g class="city-badge-group" transform="translate(75, 195)">
+      <text class="map-label island-lbl">金門</text>
+      <text class="temp-badge-text" data-temp-city="金門縣" y="14"></text>
+    </g>
+
+    <!-- 馬祖 -->
+    <g class="city-badge-group" transform="translate(75, 80)">
+      <text class="map-label island-lbl">馬祖</text>
+      <text class="temp-badge-text" data-temp-city="連江縣" y="14"></text>
+    </g>
+  </g>
+</svg>

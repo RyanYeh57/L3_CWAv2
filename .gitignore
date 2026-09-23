@@ -1,0 +1,26 @@
+# Environment Variables (CRITICAL: Do not commit)
+.env
+.env.local
+.env.*.local
+
+# Python cache and byte-code
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Database files
+database/*.db
+*.sqlite3
+*.db
+
+# OS generated files
+.DS_Store
+Thumbs.db

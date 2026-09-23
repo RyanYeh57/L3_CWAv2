@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣即時氣象地圖 | 台灣縣市氣象 Dashboard</title>
+  <meta name="description" content="中央氣象署開放資料即時視覺化地圖（類 Windy 沉浸式風格）· OpenStreetMap + Leaflet">
+
+  <!-- Leaflet.js CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="windy-theme">
+
+  <div class="map-app-container">
+
+    <!-- 頂部浮動導覽列 -->
+    <header class="floating-nav">
+      <div class="brand">
+        <span class="brand-icon">⛅</span>
+        <div>
+          <h1 class="brand-title">台灣即時氣象地圖</h1>
+          <p class="brand-subtitle">台灣縣市氣象 Dashboard · CWA OpenData · OpenStreetMap（類 Windy 風格）</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <span class="status-indicator">
+          <span class="status-dot"></span>
+          <span id="cwa-status-text">CWA 連線正常</span>
+        </span>
+        <button id="toggle-drawer-btn" class="btn-glass" title="開關天氣面板">
+          <span>📋 天氣面板</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 全螢幕 Leaflet 地圖 -->
+    <main class="map-fullscreen-viewport">
+      <div id="leaflet-map"></div>
+    </main>
+
+    <!-- 右上角浮動圖層控制面板 -->
+    <aside class="floating-panel controls-panel" aria-label="圖層控制">
+      <div class="panel-section-title">氣象圖層</div>
+      <div class="layer-buttons-group">
+        <button class="layer-btn active" data-layer="temp" id="btn-layer-temp">
+          <span class="layer-icon">🌡️</span><span>氣溫分佈</span>
+        </button>
+        <button class="layer-btn" data-layer="rain" id="btn-layer-rain">
+          <span class="layer-icon">🌧️</span><span>降雨機率</span>
+        </button>
+        <button class="layer-btn" data-layer="weather" id="btn-layer-weather">
+          <span class="layer-icon">⛅</span><span>天氣現象</span>
+        </button>
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-section-title">地圖設定</div>
+      <div class="toggle-group">
+        <label class="toggle-item">
+          <input type="checkbox" id="toggle-boundaries" checked>
+          <span class="toggle-label">縣市界線</span>
+        </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="toggle-temp-badges" checked>
+          <span class="toggle-label">氣溫標籤</span>
+        </label>
+      </div>
+      <div class="panel-divider"></div>
+      <button id="btn-load-all" class="btn-action-primary">
+        <span>🔄 載入全台熱力分佈</span>
+      </button>
+    </aside>
+
+    <!-- 右下角色階圖例 -->
+    <aside class="floating-panel legend-panel" aria-label="氣象色階標尺">
+      <div class="legend-header">
+        <span class="legend-unit" id="legend-unit-text">氣溫 °C</span>
+        <span class="legend-hint" id="legend-hint-text">5°C ~ 36°C</span>
+      </div>
+      <div class="legend-bar-container">
+        <div class="legend-gradient-bar" id="legend-bar"></div>
+      </div>
+      <div class="legend-labels" id="legend-labels">
+        <span>5</span><span>10</span><span>15</span><span>20</span><span>24</span><span>28</span><span>32</span><span>36</span>
+      </div>
+    </aside>
+
+    <!-- 浮動氣象詳情抽屜 -->
+    <section class="floating-drawer" id="weather-drawer" aria-label="縣市預報面板">
+      <div class="drawer-header">
+        <div class="drawer-header-left">
+          <span class="drawer-title-icon">📍</span>
+          <h2 class="drawer-title">縣市氣象詳情</h2>
+        </div>
+        <button id="close-drawer-btn" class="drawer-close-btn" title="收合面板">✕</button>
+      </div>
+
+      <div class="drawer-content-scroll">
+        <!-- 初始狀態 -->
+        <div id="initial-state" class="state-panel active">
+          <div class="empty-icon">🗺️</div>
+          <h3>請點擊地圖選擇縣市</h3>
+          <p>點選地圖上的 22 個縣市任一區域，或點選右上角「載入全台熱力分佈」，即可即時取得中央氣象署 36 小時預報與氣溫指標條狀圖。</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading-state" class="state-panel hidden">
+          <div class="pulse-spinner"></div>
+          <h3 id="loading-text">Loading... 正在取得：臺中市</h3>
+          <p>正在與中央氣象署同步最新預報...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="error-state" class="state-panel hidden">
+          <div class="error-icon">⚠️</div>
+          <h3 id="error-title">無法取得氣象資料</h3>
+          <p id="error-desc">請確認網路連線或 API 金鑰配置</p>
+          <button id="retry-btn" class="btn-retry">重試查詢</button>
+        </div>
+
+        <!-- 氣象內容 -->
+        <div id="content-state" class="state-panel hidden">
+          <div class="city-summary-header">
+            <div>
+              <span class="city-region-tag" id="city-region">中部地區</span>
+              <h2 class="city-title" id="current-city-name">臺中市</h2>
+            </div>
+            <div class="city-update-box">
+              <span class="update-lbl">更新時間</span>
+              <span class="update-val" id="update-timestamp">--:--</span>
+            </div>
+          </div>
+
+          <div class="weather-hero-card">
+            <div class="weather-hero-main">
+              <span class="weather-hero-icon" id="summary-weather-icon">⛅</span>
+              <div>
+                <div class="weather-hero-desc" id="summary-weather-desc">多雲時晴</div>
+                <span class="weather-hero-comfort" id="summary-comfort">舒適</span>
+              </div>
+            </div>
+            <div class="weather-hero-metrics">
+              <div class="metric-item">
+                <span class="metric-label">氣溫區間</span>
+                <span class="metric-val" id="summary-temp-range">24°C ~ 31°C</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">降雨機率</span>
+                <span class="metric-val rain-val" id="summary-pop">30%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="forecasts-container">
+            <div class="forecast-section-title">
+              <h3>36 小時預報指標條狀圖 (Bar Chart)</h3>
+              <span class="badge-dynamic">動態資料</span>
+            </div>
+            <div id="forecast-intervals-container" class="intervals-grid"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
