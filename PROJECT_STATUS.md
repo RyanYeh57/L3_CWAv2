@@ -457,3 +457,13 @@ Testing: 🟢 PASS (11/11 tests)
 Verification: 🟢 PASS (20/20 criteria)
 Release: 🟢 READY
 ```
+
+------------------------------------------------------------------------
+
+# 16. Typhoon Dynamics Implementation (2026-09-30)
+
+- Added `GET /api/typhoons` backed by CWA dataset `W-C0034-005`, with a 10-minute server cache and optional `?refresh=true` refresh.
+- Added normalized typhoon names, analysis/current/forecast positions, wind, pressure, movement, wind radii and 70% forecast probability radius.
+- Added the map overlay, storm selector, position details, forecast timeline playback, loading/error/empty states and responsive styles.
+- Selecting a county closes typhoon mode and returns to the weather drawer. The app server was left stopped for the user to start manually.
+- Validation: not run in this implementation turn. The live CWA endpoint returned a valid empty active-cyclone set when inspected, so the no-active-storm state is expected until CWA publishes a system.

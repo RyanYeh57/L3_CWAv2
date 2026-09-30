@@ -5,7 +5,7 @@ FastAPI 應用程式主入口，提供前端靜態檔案掛載與氣象 RESTful 
 
 import os
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +20,7 @@ from services.weather import (
     WeatherServiceError
 )
 from services.database import DatabaseError, get_all_cities
+from services.typhoon import get_typhoons
 
 app = FastAPI(
     title="Taiwan Weather Forecast API",
@@ -124,6 +125,12 @@ async def get_all_weather_data():
         "forecasts": forecasts,
         "updated_at": datetime.now().isoformat()
     }
+
+
+@app.get("/api/typhoons")
+async def get_typhoon_data(refresh: bool = Query(default=False)):
+    """Return normalized active CWA tropical cyclone tracks."""
+    return await get_typhoons(force_refresh=refresh)
 
 
 if __name__ == "__main__":

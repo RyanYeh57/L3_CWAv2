@@ -675,3 +675,124 @@ README
 - AI 天氣摘要
 - AI 穿衣建議
 - AI 旅遊建議
+
+---
+
+# 25. Typhoon Dynamic Map
+
+## 25.1 Goal
+
+在既有台灣天氣地圖加入「颱風動態」圖層，讓使用者查看目前活動中的熱帶氣旋、已觀測路徑、官方預報路徑、預報時間及可取得的風圈資料。此功能是資訊呈現與防災參考，不取代中央氣象署警報或官方預報。
+
+## 25.2 Official Data Source
+
+- Provider: Central Weather Administration (CWA) Open Data.
+- Dataset: `W-C0034-005`，熱帶氣旋分析與預報／颱風消息與警報－熱帶氣旋路徑。
+- Datastore API: `https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0034-005`
+- Authentication: use the existing server-side `CWA_API_KEY` as the `Authorization` parameter. Never expose the key to browser JavaScript or HTML.
+- Coverage: active tropical cyclones in the western North Pacific and South China Sea, including tropical depressions as supplied by CWA.
+- The source includes past/current analysis and future forecast positions. The product document describes normal updates every 6 hours and updates every 3 hours during a Taiwan typhoon warning. Use the source `Sent`/issued time as the displayed data time.
+- The product may contain no active cyclone records. This is a valid empty state, not an API failure.
+
+Reference: [CWA product description](https://www.cwa.gov.tw/Data/data_catalog/1-4-1.pdf), [CWA dataset](https://opendata.cwa.gov.tw/dataset/warning/W-C0034-005).
+
+## 25.3 Data Contract
+
+The backend normalizes the CWA response into a stable application schema; frontend code must not depend directly on raw CWA field names.
+
+`GET /api/typhoons` response:
+
+```json
+{
+  "status": "success",
+  "updated_at": "2026-09-30T12:00:00+08:00",
+  "source": "CWA",
+  "cyclones": [
+    {
+      "id": "source-storm-id",
+      "name_zh": "颱風名稱",
+      "name_en": "STORM NAME",
+      "classification": "typhoon",
+      "current": {
+        "time": "2026-09-30T12:00:00+08:00",
+        "latitude": 20.5,
+        "longitude": 120.5,
+        "max_wind_speed_ms": 48,
+        "max_gust_speed_ms": 58,
+        "pressure_hpa": 930,
+        "moving_direction": "WNW",
+        "moving_speed_kmh": 10
+      },
+      "history": [],
+      "forecasts": [
+        {
+          "time": "2026-09-30T18:00:00+08:00",
+          "forecast_hour": 6,
+          "latitude": 21.0,
+          "longitude": 120.0,
+          "max_wind_speed_ms": 45,
+          "radius_15ms_km": 200,
+          "radius_25ms_km": 70,
+          "radius_70_percent_km": 120
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `history` contains valid observed/analyzed positions ordered oldest to newest; `current` is the latest valid analyzed position.
+- `forecasts` contains valid future positions ordered by forecast time. Convert CWA coordinate strings to numeric latitude/longitude and confirm longitude/latitude order during parsing.
+- Names, issue time, coordinates, forecast hour, wind speed, gust, pressure, movement and available 7-level/10-level/70% probability radii are mapped when present. Optional source fields may be `null`; missing optional fields must not invalidate a cyclone.
+- Reject non-numeric or out-of-range coordinates and malformed individual points; do not draw invalid points. A cyclone with no valid current or forecast position is omitted and logged.
+- Wind speeds remain in metres per second in the API response and are labelled as m/s in the UI. Radius values are in kilometres.
+
+## 25.4 Backend Requirements
+
+- Add a typhoon service that fetches and normalizes `W-C0034-005` using `httpx` and the existing CWA API key.
+- Add `GET /api/typhoons`; return HTTP 200 with `cyclones: []` when the source has no active systems.
+- Cache a successful normalized response for up to 10 minutes to avoid redundant upstream requests; provide a refresh query or equivalent explicit refresh path that bypasses the cache.
+- Apply a finite request timeout. Return a clear HTTP 502 error for upstream/network/invalid-payload failures and HTTP 500 for missing server API configuration. Do not turn an upstream failure into an empty-storm success.
+- Do not persist typhoon points in the existing city-forecast SQLite table. The source already carries issue time and refresh cadence; use the bounded in-memory cache for this release.
+
+## 25.5 Map and Interaction Requirements
+
+- Add a clearly labelled `颱風動態` layer control without changing the existing temperature/rain/weather layer behavior.
+- Show a storm marker at the latest analyzed position. Its popup/card shows Chinese and English names, classification, observation time, maximum sustained wind, gust, central pressure, movement direction and speed when available.
+- Draw observed history as a solid line and forecast positions as a dashed line. Mark forecast points with their valid time/forecast hour and show available forecast intensity data.
+- Draw the CWA 70% probability radius and 7-level/10-level wind radii when the corresponding values are supplied. Use clearly different line styles/colors and a legend; do not infer or fabricate missing radii.
+- If quadrant wind radii are supplied, draw the corresponding directional extent; otherwise draw the supplied circular radius. Label each radius and its units.
+- When more than one cyclone is present, provide a selectable storm list. Selecting a storm highlights it and fits the map to its valid track with sensible padding and zoom limits.
+- Provide a time slider and play/pause control over observed and forecast points for the selected cyclone. Keep the official issue time visible and distinguish observed points from forecast points at all times.
+- A manual refresh action reloads current data and updates the visible timestamp. Fetch data when the typhoon layer is first opened, not continuously at a high polling rate.
+- On mobile, keep the storm selector, timeline and detail card usable without obscuring the map controls.
+
+## 25.6 Empty, Error, and Safety States
+
+- No active cyclones: show `目前沒有可顯示的熱帶氣旋資料` and leave the base map and other weather layers usable.
+- Loading: show a visible loading state while the typhoon data is being fetched.
+- Upstream/API failure: show an actionable error with retry; preserve already rendered data only if it is clearly marked with its older issue time.
+- Display the notice `路徑與風圈為中央氣象署預報資料，具有不確定性；請以官方警報與最新資訊為準。`
+- Always attribute CWA as the source. The map must not imply that a forecast path is an exact future track or that a 70% probability circle is a warning boundary.
+
+## 25.7 Acceptance Criteria
+
+- **TY-AC-01**: `GET /api/typhoons` returns normalized data from `W-C0034-005` without exposing the API key.
+- **TY-AC-02**: No-active-cyclone source data returns HTTP 200 and an empty-state message, not an error.
+- **TY-AC-03**: A sample cyclone renders a current marker, chronological observed path and dashed future path at the correct map coordinates.
+- **TY-AC-04**: Selecting each cyclone updates the highlighted path, details and map bounds.
+- **TY-AC-05**: Timeline slider and play/pause advance through valid observed and forecast points while preserving the observed/forecast distinction.
+- **TY-AC-06**: Wind radii and 70% probability radius render only when valid source values exist, with kilometre labels and a legend.
+- **TY-AC-07**: Missing optional fields and malformed individual points do not crash the endpoint or frontend.
+- **TY-AC-08**: Upstream timeout, non-success response, malformed payload and missing API key produce the documented error state.
+- **TY-AC-09**: Successful responses are cached for no more than 10 minutes; explicit refresh retrieves fresh data.
+- **TY-AC-10**: Attribution, issue time and forecast uncertainty notice are visible on desktop and mobile layouts.
+- **TY-AC-11**: Existing temperature, precipitation, weather layers and county selection continue to work when the typhoon layer is toggled on and off.
+- **TY-AC-12**: The map, storm list, details and timeline remain usable at the existing mobile breakpoint.
+
+## 25.8 Out of Scope for This Release
+
+- Rainfall accumulation/grid overlays, radar/satellite playback and storm-surge/flood impact estimates.
+- Creating a new storm forecast or calculating a route from raw coordinates.
+- Replacing or reproducing CWA warnings, watches, evacuation guidance or official warning polygons.
+- Historical archive search beyond the active systems supplied by the current dataset.

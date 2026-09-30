@@ -43,6 +43,7 @@ SVG_CITY_MAP: Dict[str, str] = {v: k for k, v in CITY_SVG_MAP.items()}
 
 # 俗體字／異體字正規化對照表
 CITY_ALIASES: Dict[str, str] = {
+    "桃園縣": "桃園市",
     "台北市": "臺北市",
     "台中市": "臺中市",
     "台南市": "臺南市",

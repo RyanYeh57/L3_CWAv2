@@ -73,6 +73,12 @@
         </label>
       </div>
       <div class="panel-divider"></div>
+      <div class="panel-section-title">風暴追蹤</div>
+      <button id="btn-typhoon-toggle" class="typhoon-toggle-btn" type="button" aria-pressed="false">
+        <span class="typhoon-toggle-icon" aria-hidden="true">🌀</span>
+        <span>颱風動態</span>
+      </button>
+      <div class="panel-divider"></div>
       <button id="btn-load-all" class="btn-action-primary">
         <span>🔄 載入全台熱力分佈</span>
       </button>
@@ -97,7 +103,7 @@
       <div class="drawer-header">
         <div class="drawer-header-left">
           <span class="drawer-title-icon">📍</span>
-          <h2 class="drawer-title">縣市氣象詳情</h2>
+          <h2 class="drawer-title">天氣看板</h2>
         </div>
         <button id="close-drawer-btn" class="drawer-close-btn" title="收合面板">✕</button>
       </div>
@@ -165,6 +171,55 @@
             </div>
             <div id="forecast-intervals-container" class="intervals-grid"></div>
           </div>
+        </div>
+
+        <div id="typhoon-state" class="state-panel hidden" aria-live="polite">
+          <div class="typhoon-panel-heading">
+            <div>
+              <span class="city-region-tag">CWA 熱帶氣旋資料</span>
+              <h2 class="city-title">颱風動態</h2>
+            </div>
+            <button id="btn-typhoon-refresh" class="btn-glass typhoon-refresh-btn" type="button">重新整理</button>
+          </div>
+          <p id="typhoon-status" class="typhoon-status">尚未載入資料</p>
+          <p id="typhoon-error" class="typhoon-message typhoon-error hidden" role="alert"></p>
+          <p id="typhoon-empty" class="typhoon-message hidden">目前沒有可顯示的熱帶氣旋資料。</p>
+          <div id="typhoon-list" class="typhoon-list" aria-label="活動中的熱帶氣旋"></div>
+
+          <article id="typhoon-details" class="typhoon-details hidden">
+            <div class="typhoon-detail-title">
+              <span id="typhoon-name-zh" class="typhoon-name-zh"></span>
+              <span id="typhoon-name-en" class="typhoon-name-en"></span>
+            </div>
+            <div class="typhoon-detail-grid">
+              <div><span>狀態</span><strong id="typhoon-classification">—</strong></div>
+              <div><span>定位時間</span><strong id="typhoon-point-time">—</strong></div>
+              <div><span>最大風速</span><strong id="typhoon-wind">—</strong></div>
+              <div><span>最大陣風</span><strong id="typhoon-gust">—</strong></div>
+              <div><span>中心氣壓</span><strong id="typhoon-pressure">—</strong></div>
+              <div><span>移動方向／速度</span><strong id="typhoon-motion">—</strong></div>
+              <div class="typhoon-prediction-row"><span>移動預測</span><strong id="typhoon-prediction">—</strong></div>
+            </div>
+            <div class="typhoon-timeline">
+              <div class="typhoon-timeline-heading">
+                <strong id="typhoon-timeline-kind">路徑時間軸</strong>
+                <button id="btn-typhoon-play" class="btn-glass" type="button" aria-pressed="false">播放</button>
+              </div>
+              <input id="typhoon-timeline-slider" type="range" min="0" max="0" value="0" disabled aria-label="颱風路徑時間軸">
+              <div class="typhoon-timeline-meta">
+                <span id="typhoon-timeline-time">—</span>
+                <span id="typhoon-timeline-hour"></span>
+              </div>
+              <div class="typhoon-map-legend">
+                <span><i class="legend-line legend-observed"></i>已觀測路徑</span>
+                <span><i class="legend-line legend-forecast"></i>預報路徑</span>
+                <span><i class="legend-ring legend-wind"></i>風圈</span>
+                <span><i class="legend-ring legend-probability"></i>70% 機率半徑</span>
+              </div>
+            </div>
+          </article>
+          <p class="typhoon-disclaimer">路徑與風圈為中央氣象署預報資料，具有不確定性；請以官方警報與最新資訊為準。</p>
+          <button id="btn-typhoon-retry" class="btn-retry hidden" type="button">重試</button>
         </div>
       </div>
     </section>

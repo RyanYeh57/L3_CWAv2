@@ -19,7 +19,13 @@ document.addEventListener("DOMContentLoaded", () => {
     geoJsonLayer: null,
     tempLabelsLayer: null,
     showTempBadges: true,
-    showBoundaries: true
+    showBoundaries: true,
+    typhoonEnabled: false,
+    typhoons: [],
+    selectedTyphoonId: null,
+    typhoonCursor: 0,
+    typhoonPlayback: null,
+    typhoonLayer: null
   };
 
   // ==========================================================================
@@ -29,6 +35,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeDrawerBtn = document.getElementById("close-drawer-btn");
   const toggleDrawerBtn = document.getElementById("toggle-drawer-btn");
   const btnLoadAll = document.getElementById("btn-load-all");
+  const btnTyphoonToggle = document.getElementById("btn-typhoon-toggle");
+  const btnTyphoonRefresh = document.getElementById("btn-typhoon-refresh");
+  const btnTyphoonRetry = document.getElementById("btn-typhoon-retry");
+  const btnTyphoonPlay = document.getElementById("btn-typhoon-play");
+  const typhoonState = document.getElementById("typhoon-state");
+  const typhoonStatus = document.getElementById("typhoon-status");
+  const typhoonError = document.getElementById("typhoon-error");
+  const typhoonEmpty = document.getElementById("typhoon-empty");
+  const typhoonList = document.getElementById("typhoon-list");
+  const typhoonDetails = document.getElementById("typhoon-details");
+  const typhoonTimelineSlider = document.getElementById("typhoon-timeline-slider");
   const toggleBoundaries = document.getElementById("toggle-boundaries");
   const toggleTempBadges = document.getElementById("toggle-temp-badges");
   const layerButtons = document.querySelectorAll(".layer-btn");
@@ -72,7 +89,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // GeoJSON COUNTYNAME → 系統 CWA 名稱 (處理「台」vs「臺」問題)
   const NAME_ALIAS = {
-    "台北市": "臺北市", "台中市": "臺中市", "台南市": "臺南市", "台東縣": "臺東縣"
+    "台北市": "臺北市", "台中市": "臺中市", "台南市": "臺南市", "台東縣": "臺東縣",
+    "桃園縣": "桃園市"
   };
   function normalizeCityName(n) { return NAME_ALIAS[n] || n; }
 
@@ -97,12 +115,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getRainColor(p) {
-    if (p <= 10) return "#1e293b";
-    if (p <= 30) return "#0369a1";
-    if (p <= 50) return "#0284c7";
-    if (p <= 70) return "#2563eb";
-    if (p <= 90) return "#4f46e5";
-    return "#7c3aed";
+    if (p <= 10) return "#94a3b8";
+    if (p <= 30) return "#38bdf8";
+    if (p <= 50) return "#22c55e";
+    if (p <= 70) return "#facc15";
+    if (p <= 90) return "#f97316";
+    return "#dc2626";
   }
 
   // ==========================================================================
@@ -116,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
     zoomControl: false,
     attributionControl: false
   });
+  state.typhoonLayer = L.layerGroup();
 
   // CARTO Voyager
   L.tileLayer(
@@ -127,6 +146,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   ).addTo(map);
 
+  // Taiwan's official electronic map provides local Chinese place labels.
+  L.tileLayer(
+    "https://wmts.nlsc.gov.tw/wmts/EMAP/default/EPSG:3857/{z}/{y}/{x}",
+    {
+      attribution: '&copy; <a href="https://maps.nlsc.gov.tw/">內政部國土測繪中心</a>',
+      minZoom: 6,
+      maxZoom: 18
+    }
+  ).addTo(map);
+
   L.control.attribution({
     position: "bottomleft"
   }).addTo(map);
@@ -134,6 +163,266 @@ document.addEventListener("DOMContentLoaded", () => {
   L.control.zoom({
     position: "bottomleft"
   }).addTo(map);
+
+  function formatTyphoonTime(value) {
+    if (!value) return "時間未提供";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("zh-TW", {
+      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[ch]);
+  }
+
+  function selectedTyphoon() {
+    return state.typhoons.find(storm => storm.id === state.selectedTyphoonId) || null;
+  }
+
+  function typhoonTimeline(storm) {
+    if (!storm) return [];
+    const history = (storm.history || []).map(point => ({ ...point, kind: "observed" }));
+    const points = storm.current ? [...history, { ...storm.current, kind: "current" }] : history;
+    return points.concat((storm.forecasts || []).map(point => ({ ...point, kind: "forecast" })));
+  }
+
+  function formatValue(value, suffix, digits = 0) {
+    if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
+    return `${Number(value).toFixed(digits)}${suffix}`;
+  }
+
+  function destinationPoint(lat, lon, bearing, distanceKm) {
+    const earthRadiusKm = 6371;
+    const angular = distanceKm / earthRadiusKm;
+    const bearingRad = bearing * Math.PI / 180;
+    const lat1 = lat * Math.PI / 180;
+    const lon1 = lon * Math.PI / 180;
+    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(bearingRad));
+    const lon2 = lon1 + Math.atan2(Math.sin(bearingRad) * Math.sin(angular) * Math.cos(lat1), Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2));
+    return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+  }
+
+  function drawTyphoonRadius(point, radius, quadrants, color, label, dashArray) {
+    if (!point || !(Number(radius) > 0)) return;
+    const center = [point.latitude, point.longitude];
+    const directions = { NE: [0, 90], SE: [90, 180], SW: [180, 270], NW: [270, 360] };
+    const validQuadrants = quadrants && Object.keys(quadrants).some(key => Number(quadrants[key]) > 0);
+    const style = { color, weight: 2, opacity: 0.95, fillColor: color, fillOpacity: 0.1, dashArray: dashArray || null };
+    if (validQuadrants) {
+      Object.entries(directions).forEach(([direction, [start, end]]) => {
+        const distance = Number(quadrants[direction]);
+        if (!(distance > 0)) return;
+        const arc = [];
+        for (let bearing = start; bearing <= end; bearing += 15) arc.push(destinationPoint(point.latitude, point.longitude, bearing, distance));
+        if (arc.at(-1)?.[0] !== destinationPoint(point.latitude, point.longitude, end, distance)[0]) {
+          arc.push(destinationPoint(point.latitude, point.longitude, end, distance));
+        }
+        L.polygon([center, ...arc, center], style).bindTooltip(`${label} ${direction}: ${distance} km`).addTo(state.typhoonLayer);
+      });
+    } else {
+      L.circle(center, { ...style, radius: Number(radius) * 1000 }).bindTooltip(`${label}: ${Number(radius)} km`).addTo(state.typhoonLayer);
+    }
+  }
+
+  function renderTyphoonTrack(storm, cursor = state.typhoonCursor) {
+    if (!state.typhoonLayer) return;
+    state.typhoonLayer.clearLayers();
+    const timeline = typhoonTimeline(storm);
+    if (!timeline.length) return;
+
+    const currentIndex = timeline.findIndex(point => point.kind === "current");
+    const splitIndex = currentIndex >= 0 ? currentIndex : Math.max(0, (storm.history || []).length - 1);
+    const observed = timeline.slice(0, splitIndex + 1);
+    const forecast = timeline.slice(splitIndex).filter(point => point.kind !== "observed");
+    if (observed.length > 1) {
+      L.polyline(observed.map(point => [point.latitude, point.longitude]), {
+        color: "#38bdf8", weight: 4, opacity: 0.95
+      }).addTo(state.typhoonLayer);
+    }
+    if (forecast.length > 1) {
+      L.polyline(forecast.map(point => [point.latitude, point.longitude]), {
+        color: "#fb923c", weight: 4, opacity: 0.95, dashArray: "10 8"
+      }).addTo(state.typhoonLayer);
+    }
+
+    (storm.forecasts || []).forEach(point => {
+      L.circleMarker([point.latitude, point.longitude], {
+        radius: 5, color: "#fff7ed", weight: 2, fillColor: "#f97316", fillOpacity: 1
+      }).bindTooltip(`${formatTyphoonTime(point.time)}${point.forecast_hour != null ? ` (+${point.forecast_hour}h)` : ""}`).addTo(state.typhoonLayer);
+      if (Number(point.radius_70_percent_km) > 0) {
+        drawTyphoonRadius(point, point.radius_70_percent_km, null, "#c084fc", "70% 機率半徑", "5 6");
+      }
+    });
+
+    const point = timeline[Math.max(0, Math.min(cursor, timeline.length - 1))];
+    const name = storm.name_zh || storm.name_en || "熱帶氣旋";
+    L.marker([point.latitude, point.longitude], {
+      icon: L.divIcon({ className: "typhoon-center-marker", html: "<span aria-hidden='true'>🌀</span>", iconSize: [42, 42], iconAnchor: [21, 21] }),
+      zIndexOffset: 1000
+    }).bindTooltip(escapeHtml(name)).addTo(state.typhoonLayer);
+
+    drawTyphoonRadius(point, point.radius_15ms_km, point.radius_15ms_quadrants_km, "#22d3ee", "七級風圈");
+    drawTyphoonRadius(point, point.radius_25ms_km, point.radius_25ms_quadrants_km, "#fbbf24", "十級風圈");
+    if (state.typhoonEnabled && !map.hasLayer(state.typhoonLayer)) state.typhoonLayer.addTo(map);
+  }
+
+  function setTyphoonDetail(storm, point) {
+    const text = (id, value) => { document.getElementById(id).textContent = value || "—"; };
+    text("typhoon-name-zh", storm.name_zh || storm.name_en || "熱帶氣旋");
+    text("typhoon-name-en", storm.name_en || "");
+    text("typhoon-classification", storm.classification === "typhoon" ? "颱風" : storm.classification === "tropical_depression" ? "熱帶性低氣壓" : "熱帶氣旋");
+    text("typhoon-point-time", formatTyphoonTime(point.time));
+    text("typhoon-wind", formatValue(point.max_wind_speed_ms, " m/s", 1));
+    text("typhoon-gust", formatValue(point.max_gust_speed_ms, " m/s", 1));
+    text("typhoon-pressure", formatValue(point.pressure_hpa, " hPa"));
+    const motion = point.moving_direction || point.moving_speed_kmh != null
+      ? `${point.moving_direction || "方向未提供"} / ${formatValue(point.moving_speed_kmh, " km/h", 0)}` : "—";
+    text("typhoon-motion", motion);
+    text("typhoon-prediction", point.moving_prediction || "—");
+    document.getElementById("typhoon-timeline-kind").textContent = point.kind === "forecast" ? "預報位置" : point.kind === "current" ? "目前位置" : "歷史分析位置";
+    document.getElementById("typhoon-timeline-time").textContent = formatTyphoonTime(point.time);
+    document.getElementById("typhoon-timeline-hour").textContent = point.forecast_hour != null ? `預報 +${point.forecast_hour} 小時` : "";
+  }
+
+  function selectTyphoon(stormId, fit = true) {
+    const storm = state.typhoons.find(item => item.id === stormId);
+    if (!storm) return;
+    state.selectedTyphoonId = stormId;
+    state.typhoonCursor = Math.max(0, (storm.history || []).length);
+    typhoonList.querySelectorAll(".typhoon-choice").forEach(button => {
+      const selected = button.dataset.stormId === stormId;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+
+    const timeline = typhoonTimeline(storm);
+    typhoonTimelineSlider.max = String(Math.max(0, timeline.length - 1));
+    typhoonTimelineSlider.value = String(state.typhoonCursor);
+    typhoonTimelineSlider.disabled = timeline.length < 2;
+    typhoonDetails.classList.remove("hidden");
+    setTyphoonDetail(storm, timeline[state.typhoonCursor] || timeline[0]);
+    renderTyphoonTrack(storm, state.typhoonCursor);
+
+    if (fit) {
+      const bounds = L.latLngBounds(timeline.map(point => [point.latitude, point.longitude]));
+      if (bounds.isValid()) map.fitBounds(bounds.pad(0.15), { maxZoom: 8, padding: [70, 70] });
+    }
+  }
+
+  function renderTyphoonList() {
+    typhoonList.replaceChildren();
+    state.typhoons.forEach(storm => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "typhoon-choice";
+      button.dataset.stormId = storm.id;
+      button.setAttribute("aria-pressed", "false");
+      const name = storm.name_zh || storm.name_en || "未命名熱帶氣旋";
+      const english = storm.name_en && storm.name_zh ? ` · ${storm.name_en}` : "";
+      const latest = storm.current;
+      button.innerHTML = `<span class="typhoon-choice-symbol" aria-hidden="true">🌀</span><span class="typhoon-choice-copy"><strong>${escapeHtml(name + english)}</strong><small>${latest ? `目前 ${formatValue(latest.max_wind_speed_ms, " m/s", 0)} · ${formatTyphoonTime(latest.time)}` : "尚無目前定位"}</small></span><span aria-hidden="true">›</span>`;
+      button.addEventListener("click", () => selectTyphoon(storm.id));
+      typhoonList.appendChild(button);
+    });
+  }
+
+  async function loadTyphoons(forceRefresh = false) {
+    typhoonStatus.textContent = "正在取得中央氣象署颱風資料…";
+    typhoonError.classList.add("hidden");
+    btnTyphoonRetry.classList.add("hidden");
+    typhoonEmpty.classList.add("hidden");
+    try {
+      const response = await fetch(`/api/typhoons${forceRefresh ? "?refresh=true" : ""}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "暫時無法取得颱風資料。");
+      state.typhoons = Array.isArray(data.cyclones) ? data.cyclones : [];
+      typhoonStatus.textContent = `資料時間：${formatTyphoonTime(data.updated_at)} · 來源：中央氣象署`;
+      renderTyphoonList();
+      typhoonEmpty.classList.toggle("hidden", state.typhoons.length > 0);
+      if (!state.typhoons.length) {
+        typhoonDetails.classList.add("hidden");
+        state.selectedTyphoonId = null;
+        state.typhoonLayer.clearLayers();
+        return;
+      }
+      const selected = state.typhoons.some(storm => storm.id === state.selectedTyphoonId)
+        ? state.selectedTyphoonId : state.typhoons[0].id;
+      selectTyphoon(selected, !state.selectedTyphoonId);
+    } catch (error) {
+      typhoonStatus.textContent = "颱風資料更新失敗";
+      typhoonError.textContent = error.message || "連線失敗，請稍後重試。";
+      typhoonError.classList.remove("hidden");
+      btnTyphoonRetry.classList.remove("hidden");
+    }
+  }
+
+  function setTyphoonMode(enabled) {
+    state.typhoonEnabled = enabled;
+    btnTyphoonToggle.classList.toggle("active", enabled);
+    btnTyphoonToggle.setAttribute("aria-pressed", String(enabled));
+    if (enabled) {
+      weatherDrawer.classList.remove("collapsed");
+      initialState.classList.add("hidden");
+      loadingState.classList.add("hidden");
+      errorState.classList.add("hidden");
+      contentState.classList.add("hidden");
+      typhoonState.classList.remove("hidden");
+      if (!map.hasLayer(state.typhoonLayer)) state.typhoonLayer.addTo(map);
+      loadTyphoons(false);
+    } else {
+      if (map.hasLayer(state.typhoonLayer)) map.removeLayer(state.typhoonLayer);
+      typhoonState.classList.add("hidden");
+      loadingState.classList.add("hidden");
+      errorState.classList.add("hidden");
+      if (state.currentCity) {
+        initialState.classList.add("hidden");
+        contentState.classList.remove("hidden");
+      } else {
+        contentState.classList.add("hidden");
+        initialState.classList.remove("hidden");
+      }
+      stopTyphoonPlayback();
+    }
+  }
+
+  function stopTyphoonPlayback() {
+    if (state.typhoonPlayback) window.clearInterval(state.typhoonPlayback);
+    state.typhoonPlayback = null;
+    btnTyphoonPlay.textContent = "播放";
+    btnTyphoonPlay.setAttribute("aria-pressed", "false");
+  }
+
+  function setTyphoonTimeline(index) {
+    const storm = selectedTyphoon();
+    const timeline = typhoonTimeline(storm);
+    if (!storm || !timeline.length) return;
+    state.typhoonCursor = Math.max(0, Math.min(Number(index), timeline.length - 1));
+    typhoonTimelineSlider.value = String(state.typhoonCursor);
+    setTyphoonDetail(storm, timeline[state.typhoonCursor]);
+    renderTyphoonTrack(storm, state.typhoonCursor);
+  }
+
+  btnTyphoonToggle.addEventListener("click", () => setTyphoonMode(!state.typhoonEnabled));
+  btnTyphoonRefresh.addEventListener("click", () => loadTyphoons(true));
+  btnTyphoonRetry.addEventListener("click", () => loadTyphoons(true));
+  typhoonTimelineSlider.addEventListener("input", event => setTyphoonTimeline(event.target.value));
+  btnTyphoonPlay.addEventListener("click", () => {
+    if (state.typhoonPlayback) {
+      stopTyphoonPlayback();
+      return;
+    }
+    const max = Number(typhoonTimelineSlider.max);
+    if (max < 1) return;
+    btnTyphoonPlay.textContent = "暫停";
+    btnTyphoonPlay.setAttribute("aria-pressed", "true");
+    state.typhoonPlayback = window.setInterval(() => {
+      const next = state.typhoonCursor >= max ? 0 : state.typhoonCursor + 1;
+      setTyphoonTimeline(next);
+    }, 1200);
+  });
 
   // ==========================================================================
   //  2. Load Counties GeoJSON
@@ -189,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     layer.bindTooltip(cityName, {
       sticky: true,
-      className: "leaflet-temp-label",
+      className: "weather-county-tooltip",
       direction: "top",
       offset: [0, -10]
     });
@@ -199,6 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
   //  3. Select City
   // ==========================================================================
   function selectCity(cityName) {
+    if (state.typhoonEnabled) setTyphoonMode(false);
     // Reset previous selection
     if (state.geoJsonLayer) {
       state.geoJsonLayer.eachLayer(l => {
@@ -369,9 +659,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const p = state.cityPops[cityName];
 
     if (state.currentLayer === "temp" && t !== undefined) {
-      layer.setStyle({ fillColor: getTempColor(t), fillOpacity: 0.65, color: state.showBoundaries ? "#475569" : "transparent", weight: 1.8 });
+      layer.setStyle({ fillColor: getTempColor(t), fillOpacity: 0.82, color: state.showBoundaries ? "#0f172a" : "transparent", weight: 2 });
     } else if (state.currentLayer === "rain" && p !== undefined) {
-      layer.setStyle({ fillColor: getRainColor(p), fillOpacity: 0.65, color: state.showBoundaries ? "#475569" : "transparent", weight: 1.8 });
+      layer.setStyle({ fillColor: getRainColor(p), fillOpacity: 0.84, color: state.showBoundaries ? "#0f172a" : "transparent", weight: 2 });
     } else {
       layer.setStyle({ fillColor: "#1e293b", fillOpacity: 0.55, color: state.showBoundaries ? "#475569" : "transparent", weight: 1.8 });
     }
@@ -400,10 +690,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const center = l.getBounds().getCenter();
         const marker = L.marker(center, {
           icon: L.divIcon({
-            className: "leaflet-temp-label",
+            className: `map-data-badge ${state.currentLayer === "weather" ? "weather-map-badge" : ""}`,
             html: text.replace("\n", "<br>"),
-            iconSize: [60, 30],
-            iconAnchor: [30, 15]
+            iconSize: [76, 46],
+            iconAnchor: [38, 23]
           }),
           interactive: false
         });
@@ -427,7 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (layer === "rain") {
       legendUnitText.textContent = "降雨機率 %";
       legendHintText.textContent = "0% ~ 100%";
-      legendBar.style.background = "linear-gradient(to right, #1e293b, #0369a1, #0284c7, #2563eb, #4f46e5, #7c3aed)";
+      legendBar.style.background = "linear-gradient(to right, #94a3b8, #38bdf8, #22c55e, #facc15, #f97316, #dc2626)";
       legendLabels.innerHTML = "<span>0%</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>100%</span>";
     } else {
       legendUnitText.textContent = "天氣狀況";
@@ -477,8 +767,8 @@ document.addEventListener("DOMContentLoaded", () => {
   retryBtn.addEventListener("click", () => { if (state.currentCity) loadWeather(state.currentCity); });
 
   // ==========================================================================
-  //  11. Boot (spec.md §16: 首頁顯示地圖，不立即呼叫全部 API)
+  //  11. Boot: load the county geometry first, then paint the full-island weather map.
   // ==========================================================================
-  loadGeoJson();
+  loadGeoJson().then(loadAllCitiesData);
 
 });
