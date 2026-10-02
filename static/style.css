@@ -1773,5 +1773,115 @@ body.windy-theme {
 
 
 /* ==========================================================================
+   UI refresh: colour-coded compact badges, compact empty drawer, mobile layer toggle
+   ========================================================================== */
+
+/* Map badges: zero-size Leaflet anchor with a centred pill inside. */
+.map-badge-anchor {
+  background: none;
+  border: 0;
+}
+
+.map-data-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  gap: 4px;
+  width: auto;
+  height: auto;
+  padding: 2px 8px;
+  overflow: visible;
+  border: 1.5px solid rgba(15, 23, 42, 0.85);
+  border-radius: 999px;
+  background: var(--badge-bg, #0f172a);
+  color: var(--badge-fg, #ffffff);
+  font-size: 13px;
+  line-height: 1.35;
+  text-shadow: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.badge-name {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.weather-map-badge {
+  padding: 1px 4px;
+  font-size: 18px;
+  line-height: 1.2;
+  background: rgba(8, 15, 30, 0.85);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Empty drawer shrinks to a small hint card instead of a tall blank panel. */
+#initial-state {
+  padding: 4px 6px 8px;
+}
+
+#initial-state .empty-icon {
+  font-size: 2rem;
+  margin-bottom: 6px;
+  animation: none;
+}
+
+#initial-state h3 {
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+@media (min-width: 901px) {
+  .floating-drawer:has(#initial-state:not(.hidden)) {
+    bottom: auto;
+    width: 300px;
+  }
+}
+
+/* Hide hairline seams between scaled tiles at fractional zoom. */
+.leaflet-tile-container img.leaflet-tile {
+  outline: 1px solid transparent;
+}
+
+/* Layer toggle button only exists on phones. */
+.btn-controls-toggle {
+  display: none;
+}
+
+.btn-glass .btn-label {
+  margin-left: 6px;
+}
+
+@media (max-width: 600px) {
+  /* Icon-only nav buttons so both fit next to the title. */
+  .btn-glass .btn-label {
+    display: none;
+  }
+
+  .btn-controls-toggle {
+    display: inline-flex;
+  }
+
+  .controls-panel {
+    display: none;
+  }
+
+  .controls-panel.open {
+    display: flex;
+  }
+
+  /* Legend sits at the bottom, clear of the zoom buttons; hidden while the drawer covers it. */
+  .legend-panel {
+    left: 56px;
+  }
+
+  body:has(.floating-drawer:not(.collapsed)) .legend-panel {
+    display: none;
+  }
+}
+
+
+/* ==========================================================================
    END
    ========================================================================== */

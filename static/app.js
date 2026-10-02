@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     zoom: 7,
     minZoom: 6,
     maxZoom: 12,
+    zoomSnap: 0.25,
     zoomControl: false,
     attributionControl: false
   });
@@ -670,37 +671,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
   //  8. Temperature Badge Labels on Map
   // ==========================================================================
+  // Show county names only when zoomed in far enough to avoid overlapping badges.
+  const BADGE_NAME_MIN_ZOOM = 9;
+
+  // Pick dark or light text so the badge stays readable on any scale colour.
+  function badgeTextColor(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const luminance = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return luminance > 0.6 ? "#0f172a" : "#ffffff";
+  }
+
   function updateTempLabels() {
     if (!state.tempLabelsLayer || !state.geoJsonLayer) return;
     state.tempLabelsLayer.clearLayers();
     if (!state.showTempBadges) return;
 
+    const showName = map.getZoom() >= BADGE_NAME_MIN_ZOOM;
     state.geoJsonLayer.eachLayer(l => {
       const cn = l.feature.properties._cwaCityName;
-      let text = "";
+      const shortName = cn.replace("市", "").replace("縣", "");
+      let value = "";
+      let bg = "#0f172a";
       if (state.currentLayer === "temp" && state.cityTemps[cn] !== undefined) {
-        text = `${cn.replace("市", "").replace("縣", "")}\n${state.cityTemps[cn]}°`;
+        value = `${state.cityTemps[cn]}°`;
+        bg = getTempColor(state.cityTemps[cn]);
       } else if (state.currentLayer === "rain" && state.cityPops[cn] !== undefined) {
-        text = `${cn.replace("市", "").replace("縣", "")}\n${state.cityPops[cn]}%`;
+        value = `${state.cityPops[cn]}%`;
+        bg = getRainColor(state.cityPops[cn]);
       } else if (state.currentLayer === "weather" && state.cityWeathers[cn]) {
-        text = `${getWeatherIcon(state.cityWeathers[cn])}`;
+        value = getWeatherIcon(state.cityWeathers[cn]);
       }
+      if (!value) return;
 
-      if (text) {
-        const center = l.getBounds().getCenter();
-        const marker = L.marker(center, {
-          icon: L.divIcon({
-            className: `map-data-badge ${state.currentLayer === "weather" ? "weather-map-badge" : ""}`,
-            html: text.replace("\n", "<br>"),
-            iconSize: [76, 46],
-            iconAnchor: [38, 23]
-          }),
-          interactive: false
-        });
-        state.tempLabelsLayer.addLayer(marker);
-      }
+      const isWeather = state.currentLayer === "weather";
+      const label = showName && !isWeather ? `<span class="badge-name">${shortName}</span>${value}` : value;
+      const marker = L.marker(l.getBounds().getCenter(), {
+        icon: L.divIcon({
+          className: "map-badge-anchor",
+          html: `<span class="map-data-badge${isWeather ? " weather-map-badge" : ""}" style="--badge-bg:${bg};--badge-fg:${badgeTextColor(bg)}" title="${cn}">${label}</span>`,
+          iconSize: [0, 0]
+        }),
+        interactive: false,
+        keyboard: false
+      });
+      state.tempLabelsLayer.addLayer(marker);
     });
   }
+
+  map.on("zoomend", updateTempLabels);
 
   // ==========================================================================
   //  9. Layer Switching
@@ -766,9 +784,37 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   retryBtn.addEventListener("click", () => { if (state.currentCity) loadWeather(state.currentCity); });
 
+  // Mobile: the layer panel is hidden behind a toggle button in the nav bar.
+  const mapControls = document.getElementById("map-controls");
+  const toggleControlsBtn = document.getElementById("toggle-controls-btn");
+  toggleControlsBtn.addEventListener("click", () => {
+    const open = mapControls.classList.toggle("open");
+    toggleControlsBtn.setAttribute("aria-expanded", String(open));
+  });
+
+  // Fit Taiwan (main island + Penghu) into the part of the map not covered by floating panels.
+  const TAIWAN_MAIN_BOUNDS = L.latLngBounds([21.85, 119.3], [25.35, 122.05]);
+  function fitTaiwan() {
+    const mapRect = map.getContainer().getBoundingClientRect();
+    const navRect = document.querySelector(".floating-nav").getBoundingClientRect();
+    const isDesktop = window.innerWidth > 900;
+    const pad = { top: navRect.bottom - mapRect.top + 12, left: 16, right: 16, bottom: 16 };
+    if (state.isDrawerOpen) {
+      const d = weatherDrawer.getBoundingClientRect();
+      if (isDesktop) pad.left = d.right - mapRect.left + 16;
+      else pad.bottom = mapRect.bottom - d.top + 16;
+    }
+    if (isDesktop) pad.right = mapRect.right - mapControls.getBoundingClientRect().left + 16;
+    map.fitBounds(TAIWAN_MAIN_BOUNDS, {
+      paddingTopLeft: [pad.left, pad.top],
+      paddingBottomRight: [pad.right, pad.bottom],
+      animate: false
+    });
+  }
+
   // ==========================================================================
   //  11. Boot: load the county geometry first, then paint the full-island weather map.
   // ==========================================================================
-  loadGeoJson().then(loadAllCitiesData);
+  loadGeoJson().then(() => { fitTaiwan(); return loadAllCitiesData(); });
 
 });

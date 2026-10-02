@@ -27,7 +27,7 @@
         <span class="brand-icon">⛅</span>
         <div>
           <h1 class="brand-title">台灣即時氣象地圖</h1>
-          <p class="brand-subtitle">台灣縣市氣象 Dashboard · CWA OpenData · OpenStreetMap（類 Windy 風格）</p>
+          <p class="brand-subtitle">中央氣象署開放資料 · 36 小時預報</p>
         </div>
       </div>
       <div class="nav-actions">
@@ -35,8 +35,11 @@
           <span class="status-dot"></span>
           <span id="cwa-status-text">CWA 連線正常</span>
         </span>
-        <button id="toggle-drawer-btn" class="btn-glass" title="開關天氣面板">
-          <span>📋 天氣面板</span>
+        <button id="toggle-controls-btn" class="btn-glass btn-controls-toggle" type="button" aria-expanded="false" aria-controls="map-controls" aria-label="圖層" title="開關圖層面板">
+          <span aria-hidden="true">🗂️</span><span class="btn-label">圖層</span>
+        </button>
+        <button id="toggle-drawer-btn" class="btn-glass" aria-label="天氣面板" title="開關天氣面板">
+          <span aria-hidden="true">📋</span><span class="btn-label">天氣面板</span>
         </button>
       </div>
     </header>
@@ -47,7 +50,7 @@
     </main>
 
     <!-- 右上角浮動圖層控制面板 -->
-    <aside class="floating-panel controls-panel" aria-label="圖層控制">
+    <aside class="floating-panel controls-panel" id="map-controls" aria-label="圖層控制">
       <div class="panel-section-title">氣象圖層</div>
       <div class="layer-buttons-group">
         <button class="layer-btn active" data-layer="temp" id="btn-layer-temp">
@@ -113,7 +116,7 @@
         <div id="initial-state" class="state-panel active">
           <div class="empty-icon">🗺️</div>
           <h3>請點擊地圖選擇縣市</h3>
-          <p>點選地圖上的 22 個縣市任一區域，或點選右上角「載入全台熱力分佈」，即可即時取得中央氣象署 36 小時預報與氣溫指標條狀圖。</p>
+          <p>點地圖上任一縣市，查看 36 小時預報。</p>
         </div>
 
         <!-- Loading -->

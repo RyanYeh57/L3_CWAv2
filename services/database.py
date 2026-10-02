@@ -10,7 +10,8 @@ from datetime import datetime
 
 # 資料庫目錄與路徑
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_DIR = os.path.join(BASE_DIR, "database")
+# Vercel 只允許寫入 /tmp（VERCEL 環境變數由平台自動設定）
+DB_DIR = "/tmp" if os.getenv("VERCEL") else os.path.join(BASE_DIR, "database")
 DB_PATH = os.path.join(DB_DIR, "weather.db")
 
 
