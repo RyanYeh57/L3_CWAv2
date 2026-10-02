@@ -21,6 +21,8 @@ from services.weather import (
 )
 from services.database import DatabaseError, get_all_cities
 from services.typhoon import get_typhoons
+from services.observation import get_observations
+from services.warnings import get_warnings
 
 app = FastAPI(
     title="Taiwan Weather Forecast API",
@@ -132,6 +134,18 @@ async def get_typhoon_data(refresh: bool = Query(default=False)):
     """Return normalized active CWA tropical cyclone tracks."""
     return await get_typhoons(force_refresh=refresh)
 
+
+@app.get("/api/observations")
+async def get_observation_data(refresh: bool = Query(default=False)):
+    """取得全台測站即時觀測資料與統計"""
+    return await get_observations(force_refresh=refresh)
+
+
+@app.get("/api/warnings")
+async def get_warning_data(refresh: bool = Query(default=False)):
+    """取得中央氣象署天氣特報"""
+    warnings = await get_warnings(force_refresh=refresh)
+    return {"status": "success", "total": len(warnings), "warnings": warnings}
 
 if __name__ == "__main__":
     import uvicorn

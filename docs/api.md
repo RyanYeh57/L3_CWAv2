@@ -53,6 +53,52 @@
 - **說明**: 取得全台灣 22 縣市當前最新預報摘要。
 - **回應代碼**: 200 OK
 
+### 2.5 取得全台即時觀測
+- **路徑**: `GET /api/observations?refresh=false`
+- **說明**: 來源為 CWA `O-A0003-001`（約 360 個測站），記憶體快取 10 分鐘，不寫入資料庫。缺值（`-99`）回傳 `null`。`rain` 為今日累積雨量 (mm)。
+- **Response Example**:
+```json
+{
+  "stations": [
+    {
+      "id": "466940", "name": "基隆", "county": "基隆市", "town": "仁愛區",
+      "lat": 25.133314, "lon": 121.740475,
+      "temp": 28.5, "rain": 1.5, "wind_speed": 3.1, "wind_dir": 10.0,
+      "humidity": 82.0, "weather": "晴"
+    }
+  ],
+  "summary": {
+    "obs_time": "2026-10-02 15:40",
+    "count": 363,
+    "max_temp": {"value": 33.2, "station": "玉井"},
+    "min_temp": {"value": 8.4, "station": "玉山"},
+    "max_rain": {"value": 58.0, "station": "春日"},
+    "max_wind": {"value": 10.9, "station": "彭佳嶼"}
+  }
+}
+```
+
+### 2.6 取得天氣特報
+- **路徑**: `GET /api/warnings?refresh=false`
+- **說明**: 來源為 CWA `W-C0033-002`，記憶體快取 10 分鐘。
+- **Response Example**:
+```json
+{
+  "status": "success",
+  "total": 1,
+  "warnings": [
+    {
+      "title": "大雨特報",
+      "start_time": "2026-10-02 15:37",
+      "end_time": "2026-10-02 23:00",
+      "issue_time": "2026-10-02 15:35",
+      "text": "午後對流發展旺盛，易有短延時強降雨……",
+      "areas": ["新竹市", "臺中市"]
+    }
+  ]
+}
+```
+
 ## 3. Error Responses
 遵照 `spec.md` 規範定義繁體中文錯誤訊息：
 - 缺少 API Key: `{"detail": "系統尚未設定 CWA_API_KEY"}` (HTTP 500)

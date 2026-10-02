@@ -263,3 +263,99 @@ def test_static_assets_exist():
     assert os.path.exists(os.path.join(base_dir, "static", "style.css"))
     assert os.path.exists(os.path.join(base_dir, "static", "app.js"))
     assert os.path.exists(os.path.join(base_dir, "static", "taiwan-map.svg"))
+
+
+# -------------------------------------------------------------
+# 即時觀測與天氣特報解析測試
+# -------------------------------------------------------------
+def _station(name, lat, lon, temp, rain="0.0", wind="1.0", humidity="80"):
+    return {
+        "StationName": name, "StationId": name + "-id",
+        "ObsTime": {"DateTime": "2026-10-02T15:40:00+08:00"},
+        "GeoInfo": {
+            "Coordinates": [
+                {"CoordinateName": "TWD67", "StationLatitude": "0", "StationLongitude": "0"},
+                {"CoordinateName": "WGS84", "StationLatitude": lat, "StationLongitude": lon},
+            ],
+            "CountyName": "臺北市", "TownName": "中正區",
+        },
+        "WeatherElement": {
+            "Weather": "晴", "Now": {"Precipitation": rain},
+            "WindDirection": "90.0", "WindSpeed": wind,
+            "AirTemperature": temp, "RelativeHumidity": humidity,
+        },
+    }
+
+
+def test_observation_parser():
+    """驗證測站解析、-99 缺值轉 None 與全台統計"""
+    from services.observation import parse_observations
+    raw = {"records": {"Station": [
+        _station("A", "25.0", "121.5", "30.5", rain="12.5", wind="3.0"),
+        _station("B", "24.0", "121.0", "-99", rain="-99", wind="8.2", humidity="-99"),
+        _station("C", "23.0", "120.5", "18.0", rain="0.0", wind="-99"),
+    ]}}
+    result = parse_observations(raw)
+    stations = result["stations"]
+    assert len(stations) == 3
+    a = stations[0]
+    assert a["lat"] == 25.0 and a["lon"] == 121.5
+    assert a["temp"] == 30.5 and a["rain"] == 12.5 and a["wind_dir"] == 90.0
+    assert stations[1]["temp"] is None and stations[1]["humidity"] is None
+    summary = result["summary"]
+    assert summary["count"] == 3
+    assert summary["obs_time"] == "2026-10-02 15:40"
+    assert summary["max_temp"] == {"value": 30.5, "station": "A"}
+    assert summary["min_temp"] == {"value": 18.0, "station": "C"}
+    assert summary["max_rain"] == {"value": 12.5, "station": "A"}
+    assert summary["max_wind"] == {"value": 8.2, "station": "B"}
+
+
+def test_observation_parser_empty():
+    """驗證空資料不報錯"""
+    from services.observation import parse_observations
+    result = parse_observations({})
+    assert result["stations"] == []
+    assert result["summary"]["count"] == 0
+    assert result["summary"]["max_temp"] is None
+
+
+def test_warning_parser():
+    """驗證特報標題、時間、內文與影響縣市"""
+    from services.warnings import parse_warnings
+    raw = {"records": {"record": [{
+        "datasetInfo": {
+            "datasetDescription": "大雨特報",
+            "validTime": {"startTime": "2026-10-02 15:37:00", "endTime": "2026-10-02 23:00:00"},
+            "issueTime": "2026-10-02 15:35:00",
+        },
+        "contents": {"content": {"contentText": "\n   午後對流發展旺盛。\n   "}},
+        "hazardConditions": {"hazards": {"hazard": [{"info": {
+            "phenomena": "大雨",
+            "affectedAreas": {"location": [{"locationName": "新竹市"}, {"locationName": "臺中市"}]},
+        }}]}},
+    }]}}
+    warnings = parse_warnings(raw)
+    assert warnings == [{
+        "title": "大雨特報",
+        "start_time": "2026-10-02 15:37",
+        "end_time": "2026-10-02 23:00",
+        "issue_time": "2026-10-02 15:35",
+        "text": "午後對流發展旺盛。",
+        "areas": ["新竹市", "臺中市"],
+    }]
+    assert parse_warnings({}) == []
+
+
+def test_observation_and_warning_routes(monkeypatch):
+    """驗證新 API 路由回傳服務結果"""
+    import main
+    async def fake_obs(force_refresh=False):
+        return {"stations": [], "summary": {"count": 0}}
+    async def fake_warn(force_refresh=False):
+        return [{"title": "大雨特報"}]
+    monkeypatch.setattr(main, "get_observations", fake_obs)
+    monkeypatch.setattr(main, "get_warnings", fake_warn)
+    assert client.get("/api/observations").json()["summary"]["count"] == 0
+    resp = client.get("/api/warnings").json()
+    assert resp["total"] == 1 and resp["warnings"][0]["title"] == "大雨特報"

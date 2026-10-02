@@ -25,7 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
     selectedTyphoonId: null,
     typhoonCursor: 0,
     typhoonPlayback: null,
-    typhoonLayer: null
+    typhoonLayer: null,
+    obsMetric: null,
+    observations: null,
+    obsLayer: null,
+    radarLayer: null
   };
 
   // ==========================================================================
@@ -48,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const typhoonTimelineSlider = document.getElementById("typhoon-timeline-slider");
   const toggleBoundaries = document.getElementById("toggle-boundaries");
   const toggleTempBadges = document.getElementById("toggle-temp-badges");
-  const layerButtons = document.querySelectorAll(".layer-btn");
+  const layerButtons = document.querySelectorAll(".layer-btn[data-layer]");
   const legendUnitText = document.getElementById("legend-unit-text");
   const legendHintText = document.getElementById("legend-hint-text");
   const legendBar = document.getElementById("legend-bar");
@@ -138,24 +142,37 @@ document.addEventListener("DOMContentLoaded", () => {
   state.typhoonLayer = L.layerGroup();
 
   // CARTO Voyager
-  L.tileLayer(
+  const voyagerTiles = L.tileLayer(
     "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3v36_1_fda4eba4a7c33c44504087c6",
     {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/">CARTO</a>',
       maxZoom: 18
     }
-  ).addTo(map);
+  );
 
   // Taiwan's official electronic map provides local Chinese place labels.
-  L.tileLayer(
+  const nlscTiles = L.tileLayer(
     "https://wmts.nlsc.gov.tw/wmts/EMAP/default/EPSG:3857/{z}/{y}/{x}",
     {
       attribution: '&copy; <a href="https://maps.nlsc.gov.tw/">內政部國土測繪中心</a>',
       minZoom: 6,
       maxZoom: 18
     }
-  ).addTo(map);
+  );
+
+  const BASEMAPS = {
+    standard: L.layerGroup([voyagerTiles, nlscTiles]),
+    dark: L.tileLayer(
+      "https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_3v36_1_fda4eba4a7c33c44504087c6",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 18
+      }
+    )
+  };
+  let activeBasemap = BASEMAPS.standard.addTo(map);
 
   L.control.attribution({
     position: "bottomleft"
@@ -656,6 +673,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyLayerColorToFeature(layer, cityName) {
+    // Dim county fills while station dots are shown.
+    if (state.obsMetric) {
+      layer.setStyle({ fillColor: "#0f172a", fillOpacity: 0.12, color: state.showBoundaries ? "#334155" : "transparent", weight: 1.2 });
+      return;
+    }
     const t = state.cityTemps[cityName];
     const p = state.cityPops[cityName];
 
@@ -684,7 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateTempLabels() {
     if (!state.tempLabelsLayer || !state.geoJsonLayer) return;
     state.tempLabelsLayer.clearLayers();
-    if (!state.showTempBadges) return;
+    if (!state.showTempBadges || state.obsMetric) return;
 
     const showName = map.getZoom() >= BADGE_NAME_MIN_ZOOM;
     state.geoJsonLayer.eachLayer(l => {
@@ -723,26 +745,31 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
   //  9. Layer Switching
   // ==========================================================================
+  const TEMP_GRADIENT = ["#2c7bb6", "#5aa2cf", "#abd9e9", "#7fcdbb", "#d9ef8b", "#fee08b", "#fdae61", "#f46d43", "#d73027"];
+  const TEMP_TICKS = ["5", "10", "15", "20", "24", "28", "32", "36"];
+  const LEGENDS = {
+    temp: { unit: "氣溫 °C", hint: "5°C ~ 36°C", colors: TEMP_GRADIENT, ticks: TEMP_TICKS },
+    rain: { unit: "降雨機率 %", hint: "0% ~ 100%", colors: ["#94a3b8", "#38bdf8", "#22c55e", "#facc15", "#f97316", "#dc2626"], ticks: ["0%", "20%", "40%", "60%", "80%", "100%"] },
+    weather: { unit: "天氣狀況", hint: "現象圖標", colors: ["#f59e0b", "#38bdf8", "#64748b", "#3b82f6"], ticks: ["晴天", "多雲", "陰天", "雨天"] },
+    obs_temp: { unit: "測站氣溫 °C", hint: "即時觀測", colors: TEMP_GRADIENT, ticks: TEMP_TICKS },
+    obs_rain: { unit: "今日累積雨量 mm", hint: "即時觀測", colors: ["#94a3b8", "#7dd3fc", "#22c55e", "#facc15", "#f97316", "#dc2626"], ticks: ["0", "0.5", "10", "40", "80", "200"] },
+    obs_wind: { unit: "風速 m/s", hint: "箭頭＝風吹去的方向", colors: ["#a7f3d0", "#34d399", "#facc15", "#f97316", "#dc2626"], ticks: ["0", "3.4", "5.5", "8", "10.8"] },
+    obs_humidity: { unit: "相對濕度 %", hint: "即時觀測", colors: ["#f59e0b", "#fde68a", "#a5f3fc", "#38bdf8", "#2563eb"], ticks: ["0", "40", "60", "75", "90"] }
+  };
+
+  function renderLegend(key) {
+    const legend = LEGENDS[key];
+    legendUnitText.textContent = legend.unit;
+    legendHintText.textContent = legend.hint;
+    legendBar.style.background = `linear-gradient(to right, ${legend.colors.join(", ")})`;
+    legendLabels.innerHTML = legend.ticks.map(t => `<span>${t}</span>`).join("");
+  }
+
   function switchLayer(layer) {
     state.currentLayer = layer;
     layerButtons.forEach(b => b.classList.toggle("active", b.dataset.layer === layer));
-
-    if (layer === "temp") {
-      legendUnitText.textContent = "氣溫 °C";
-      legendHintText.textContent = "5°C ~ 36°C";
-      legendBar.style.background = "linear-gradient(to right, #2c7bb6, #5aa2cf, #abd9e9, #7fcdbb, #d9ef8b, #fee08b, #fdae61, #f46d43, #d73027)";
-      legendLabels.innerHTML = "<span>5</span><span>10</span><span>15</span><span>20</span><span>24</span><span>28</span><span>32</span><span>36</span>";
-    } else if (layer === "rain") {
-      legendUnitText.textContent = "降雨機率 %";
-      legendHintText.textContent = "0% ~ 100%";
-      legendBar.style.background = "linear-gradient(to right, #94a3b8, #38bdf8, #22c55e, #facc15, #f97316, #dc2626)";
-      legendLabels.innerHTML = "<span>0%</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>100%</span>";
-    } else {
-      legendUnitText.textContent = "天氣狀況";
-      legendHintText.textContent = "現象圖標";
-      legendBar.style.background = "linear-gradient(to right, #f59e0b, #38bdf8, #64748b, #3b82f6)";
-      legendLabels.innerHTML = "<span>晴天</span><span>多雲</span><span>陰天</span><span>雨天</span>";
-    }
+    if (state.obsMetric) setObsMetric(null);
+    renderLegend(layer);
 
     if (!state.allCitiesData) { loadAllCitiesData(); }
     else { applyCurrentLayerColors(); updateTempLabels(); }
@@ -813,8 +840,259 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================================================
-  //  11. Boot: load the county geometry first, then paint the full-island weather map.
+  //  11. Weather Warnings Banner
+  // ==========================================================================
+  const warningBanner = document.getElementById("warning-banner");
+  const warningToggle = document.getElementById("warning-toggle");
+
+  async function loadWarnings() {
+    try {
+      const res = await fetch("/api/warnings");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { warnings } = await res.json();
+      if (!warnings.length) return;
+      document.getElementById("warning-count").textContent = warnings.length;
+      document.getElementById("warning-names").textContent = warnings.map(w => w.title).join("、");
+      document.getElementById("warning-list").innerHTML = warnings.map(w => `
+        <article class="warning-item">
+          <div class="warning-item-head">
+            <span class="warning-tag">${escapeHtml(w.title)}</span>
+            <span class="warning-time">有效至 ${escapeHtml(w.end_time.substring(5))}</span>
+          </div>
+          <p class="warning-text">${escapeHtml(w.text)}</p>
+          ${w.areas.length ? `<p class="warning-areas">影響：${w.areas.map(escapeHtml).join("、")}</p>` : ""}
+        </article>`).join("");
+      warningBanner.classList.remove("hidden");
+    } catch (err) {
+      // Warnings are optional; keep the banner hidden when they cannot be loaded.
+      console.error("Load warnings failed:", err);
+    }
+  }
+
+  warningToggle.addEventListener("click", () => {
+    const collapsed = warningBanner.classList.toggle("collapsed");
+    warningToggle.setAttribute("aria-expanded", String(!collapsed));
+  });
+
+  // ==========================================================================
+  //  12. Real-time Station Observations
+  // ==========================================================================
+  const obsButtons = document.querySelectorAll(".obs-btn");
+  const obsMsg = document.getElementById("obs-msg");
+  state.obsLayer = L.layerGroup();
+
+  function bandColor(value, steps, colors) {
+    let i = 0;
+    while (i < steps.length && value >= steps[i]) i++;
+    return colors[i];
+  }
+
+  const OBS_METRICS = {
+    temp: { field: "temp", unit: "°C", color: v => getTempColor(v) },
+    rain: { field: "rain", unit: " mm", color: v => bandColor(v, [0.5, 10, 40, 80, 200], LEGENDS.obs_rain.colors) },
+    wind: { field: "wind_speed", unit: " m/s", color: v => bandColor(v, [3.4, 5.5, 8, 10.8], LEGENDS.obs_wind.colors) },
+    humidity: { field: "humidity", unit: "%", color: v => bandColor(v, [40, 60, 75, 90], LEGENDS.obs_humidity.colors) }
+  };
+
+  function fmt(value, unit) {
+    return value === null || value === undefined ? "—" : `${value}${unit}`;
+  }
+
+  function stationPopup(s) {
+    return `
+      <div class="station-popup">
+        <strong>${escapeHtml(s.name)}</strong> <span>${escapeHtml(s.county)}${escapeHtml(s.town)}</span>
+        <dl>
+          <dt>天氣</dt><dd>${escapeHtml(s.weather || "—")}</dd>
+          <dt>氣溫</dt><dd>${fmt(s.temp, "°C")}</dd>
+          <dt>今日雨量</dt><dd>${fmt(s.rain, " mm")}</dd>
+          <dt>風速</dt><dd>${fmt(s.wind_speed, " m/s")}</dd>
+          <dt>濕度</dt><dd>${fmt(s.humidity, "%")}</dd>
+        </dl>
+        <small>觀測時間 ${escapeHtml(state.observations.summary.obs_time)}</small>
+      </div>`;
+  }
+
+  function renderObservations() {
+    state.obsLayer.clearLayers();
+    const metric = OBS_METRICS[state.obsMetric];
+    if (!metric || !state.observations) return;
+    state.observations.stations.forEach(s => {
+      const value = s[metric.field];
+      if (value === null) return;
+      const color = metric.color(value);
+      let marker;
+      if (state.obsMetric === "wind" && s.wind_dir !== null && value > 0) {
+        // CWA wind direction is where the wind comes from; the arrow points downwind.
+        marker = L.marker([s.lat, s.lon], {
+          icon: L.divIcon({
+            className: "map-badge-anchor",
+            html: `<span class="wind-arrow" style="--arrow-color:${color};transform:translate(-50%,-50%) rotate(${s.wind_dir + 180}deg)">↑</span>`,
+            iconSize: [0, 0]
+          })
+        });
+      } else {
+        marker = L.circleMarker([s.lat, s.lon], {
+          radius: 6, color: "#0f172a", weight: 1.2, fillColor: color, fillOpacity: 0.95
+        });
+      }
+      marker.bindTooltip(`${escapeHtml(s.name)} ${fmt(value, metric.unit)}`, { direction: "top", offset: [0, -6] });
+      marker.bindPopup(() => stationPopup(s));
+      state.obsLayer.addLayer(marker);
+    });
+  }
+
+  function renderObsSummary() {
+    const summary = state.observations.summary;
+    const cards = [
+      ["最高溫", summary.max_temp, "°C"],
+      ["最低溫", summary.min_temp, "°C"],
+      ["最大雨量", summary.max_rain, " mm"],
+      ["最大風速", summary.max_wind, " m/s"]
+    ];
+    document.getElementById("obs-summary-time").textContent = `${summary.obs_time.substring(5)} · ${summary.count} 站`;
+    document.getElementById("obs-summary-grid").innerHTML = cards.map(([label, item, unit]) => `
+      <div class="obs-stat">
+        <span class="obs-stat-label">${label}</span>
+        <strong>${item ? fmt(item.value, unit) : "—"}</strong>
+        <span class="obs-stat-station">${item ? escapeHtml(item.station) : ""}</span>
+      </div>`).join("");
+    document.getElementById("obs-summary").classList.remove("hidden");
+  }
+
+  async function loadObservations() {
+    try {
+      const res = await fetch("/api/observations");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      state.observations = data;
+      renderObsSummary();
+      return true;
+    } catch (err) {
+      console.error("Load observations failed:", err);
+      return false;
+    }
+  }
+
+  function markObsButtons(metric) {
+    obsButtons.forEach(b => {
+      const on = b.dataset.obs === metric;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+  }
+
+  async function setObsMetric(metric) {
+    obsMsg.classList.add("hidden");
+    if (metric && !state.observations && !(await loadObservations())) {
+      obsMsg.textContent = "無法取得即時觀測資料，請稍後再試。";
+      obsMsg.classList.remove("hidden");
+      return;
+    }
+    state.obsMetric = metric;
+    markObsButtons(metric);
+    if (metric) {
+      renderObservations();
+      state.obsLayer.addTo(map);
+      renderLegend(`obs_${metric}`);
+    } else {
+      map.removeLayer(state.obsLayer);
+      renderLegend(state.currentLayer);
+    }
+    applyCurrentLayerColors();
+    updateTempLabels();
+  }
+
+  obsButtons.forEach(b => b.addEventListener("click", () => {
+    setObsMetric(state.obsMetric === b.dataset.obs ? null : b.dataset.obs);
+  }));
+
+  // ==========================================================================
+  //  13. Radar, Basemap and Locate Me
+  // ==========================================================================
+  const toggleRadar = document.getElementById("toggle-radar");
+  const radarMsg = document.getElementById("radar-msg");
+
+  function showPanelMsg(el, text) {
+    el.textContent = text;
+    el.classList.remove("hidden");
+  }
+
+  toggleRadar.addEventListener("change", async () => {
+    radarMsg.classList.add("hidden");
+    if (state.radarLayer) map.removeLayer(state.radarLayer);
+    if (!toggleRadar.checked) return;
+    try {
+      const res = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+      const data = await res.json();
+      const latest = data.radar.past[data.radar.past.length - 1];
+      // RainViewer's free tiles stop at zoom 7; Leaflet upscales beyond that.
+      state.radarLayer = L.tileLayer(`${data.host}${latest.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+        opacity: 0.6,
+        maxNativeZoom: 7,
+        zIndex: 10,
+        attribution: '<a href="https://www.rainviewer.com/">RainViewer</a>'
+      });
+      if (!toggleRadar.checked) return;
+      state.radarLayer.addTo(map);
+      const time = new Date(latest.time * 1000).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
+      showPanelMsg(radarMsg, `雷達時間 ${time}`);
+    } catch (err) {
+      console.error("Load radar failed:", err);
+      toggleRadar.checked = false;
+      showPanelMsg(radarMsg, "無法取得雷達圖，請稍後再試。");
+    }
+  });
+
+  const basemapButtons = document.querySelectorAll(".basemap-btn");
+  basemapButtons.forEach(b => b.addEventListener("click", () => {
+    map.removeLayer(activeBasemap);
+    activeBasemap = BASEMAPS[b.dataset.basemap].addTo(map);
+    basemapButtons.forEach(other => {
+      const on = other === b;
+      other.classList.toggle("active", on);
+      other.setAttribute("aria-pressed", String(on));
+    });
+  }));
+
+  const btnLocate = document.getElementById("btn-locate");
+  const locateMsg = document.getElementById("locate-msg");
+  const LOCATE_LABEL = "📍 定位我的位置";
+  const LOCATE_ERRORS = { 1: "你沒有允許定位權限。", 2: "找不到你的位置。", 3: "定位逾時，請再試一次。" };
+  let locateMarker = null;
+
+  function resetLocateButton() {
+    btnLocate.disabled = false;
+    btnLocate.textContent = LOCATE_LABEL;
+  }
+
+  btnLocate.addEventListener("click", () => {
+    locateMsg.classList.add("hidden");
+    if (!navigator.geolocation) {
+      showPanelMsg(locateMsg, "這個瀏覽器不支援定位。");
+      return;
+    }
+    btnLocate.disabled = true;
+    btnLocate.textContent = "⏳ 定位中...";
+    navigator.geolocation.getCurrentPosition(pos => {
+      const latlng = [pos.coords.latitude, pos.coords.longitude];
+      if (locateMarker) map.removeLayer(locateMarker);
+      locateMarker = L.circleMarker(latlng, {
+        radius: 8, color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1
+      }).bindTooltip("你在這裡").addTo(map);
+      map.flyTo(latlng, 10);
+      resetLocateButton();
+    }, err => {
+      showPanelMsg(locateMsg, LOCATE_ERRORS[err.code] || "定位失敗。");
+      resetLocateButton();
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  });
+
+  // ==========================================================================
+  //  14. Boot: load the county geometry first, then paint the full-island weather map.
   // ==========================================================================
   loadGeoJson().then(() => { fitTaiwan(); return loadAllCitiesData(); });
+  loadWarnings();
+  loadObservations();
 
 });

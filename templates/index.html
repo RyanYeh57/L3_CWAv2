@@ -44,6 +44,17 @@
       </div>
     </header>
 
+    <!-- 天氣特報橫幅 -->
+    <section id="warning-banner" class="floating-panel warning-banner collapsed hidden" aria-label="天氣特報">
+      <button id="warning-toggle" class="warning-head" type="button" aria-expanded="false" aria-controls="warning-list">
+        <span class="warning-icon" aria-hidden="true">⚠️</span>
+        <span class="warning-title">天氣特報 <strong id="warning-count">0</strong> 則</span>
+        <span id="warning-names" class="warning-names"></span>
+        <span class="warning-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div id="warning-list" class="warning-list"></div>
+    </section>
+
     <!-- 全螢幕 Leaflet 地圖 -->
     <main class="map-fullscreen-viewport">
       <div id="leaflet-map"></div>
@@ -64,6 +75,15 @@
         </button>
       </div>
       <div class="panel-divider"></div>
+      <div class="panel-section-title">即時觀測</div>
+      <div class="obs-buttons-group">
+        <button class="layer-btn obs-btn" data-obs="temp" type="button" aria-pressed="false"><span class="layer-icon">🌡️</span><span>氣溫</span></button>
+        <button class="layer-btn obs-btn" data-obs="rain" type="button" aria-pressed="false"><span class="layer-icon">☔</span><span>雨量</span></button>
+        <button class="layer-btn obs-btn" data-obs="wind" type="button" aria-pressed="false"><span class="layer-icon">💨</span><span>風</span></button>
+        <button class="layer-btn obs-btn" data-obs="humidity" type="button" aria-pressed="false"><span class="layer-icon">💧</span><span>濕度</span></button>
+      </div>
+      <p id="obs-msg" class="panel-msg hidden"></p>
+      <div class="panel-divider"></div>
       <div class="panel-section-title">地圖設定</div>
       <div class="toggle-group">
         <label class="toggle-item">
@@ -74,6 +94,15 @@
           <input type="checkbox" id="toggle-temp-badges" checked>
           <span class="toggle-label">氣溫標籤</span>
         </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="toggle-radar">
+          <span class="toggle-label">雷達回波</span>
+        </label>
+      </div>
+      <p id="radar-msg" class="panel-msg hidden"></p>
+      <div class="basemap-group" role="group" aria-label="底圖">
+        <button class="basemap-btn active" data-basemap="standard" type="button" aria-pressed="true">標準</button>
+        <button class="basemap-btn" data-basemap="dark" type="button" aria-pressed="false">深色</button>
       </div>
       <div class="panel-divider"></div>
       <div class="panel-section-title">風暴追蹤</div>
@@ -85,6 +114,8 @@
       <button id="btn-load-all" class="btn-action-primary">
         <span>🔄 載入全台熱力分佈</span>
       </button>
+      <button id="btn-locate" class="btn-locate" type="button">📍 定位我的位置</button>
+      <p id="locate-msg" class="panel-msg hidden"></p>
     </aside>
 
     <!-- 右下角色階圖例 -->
@@ -117,6 +148,13 @@
           <div class="empty-icon">🗺️</div>
           <h3>請點擊地圖選擇縣市</h3>
           <p>點地圖上任一縣市，查看 36 小時預報。</p>
+          <div id="obs-summary" class="obs-summary hidden">
+            <div class="obs-summary-head">
+              <span>全台即時概況</span>
+              <span id="obs-summary-time" class="obs-summary-time"></span>
+            </div>
+            <div id="obs-summary-grid" class="obs-summary-grid"></div>
+          </div>
         </div>
 
         <!-- Loading -->
